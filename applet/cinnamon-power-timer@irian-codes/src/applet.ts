@@ -1,4 +1,5 @@
 import { formatRemaining } from './timer-format';
+import { positionDropdown } from './menu-layout';
 import { parseTimerValue } from './timer-request';
 
 const Applet = imports.ui.applet;
@@ -228,6 +229,7 @@ class CinnamonPowerTimerApplet extends Applet.TextIconApplet {
     this.set_applet_tooltip('Cinnamon Power Timer');
     this._menuManager = new PopupMenu.PopupMenuManager(this);
     this.menu = new Applet.AppletPopupMenu(this, orientation);
+    this.menu.actor.add_style_class_name('cpt-menu');
     this._menuManager.addMenu(this.menu);
     this.settings = new Settings.AppletSettings(this, metadata.uuid, instanceId);
     this.settings.bind('cancellation-delay-seconds', 'cancellationDelay');
@@ -328,18 +330,22 @@ class CinnamonPowerTimerApplet extends Applet.TextIconApplet {
   }
 
   private _buildNewTimerMenu(): void {
-    this.menu.addMenuItem(
-      new PopupMenu.PopupMenuItem('New Timer', { reactive: false, style_class: 'cpt-title' }),
-    );
+    this._addStaticLabel('New Timer', 'cpt-title');
     const modeRow = new PopupMenu.PopupBaseMenuItem({ reactive: false });
     const modeBox = new St.BoxLayout({ style_class: 'cpt-mode-box' });
     const atTimeButton = new St.Button({
       label: 'At time',
-      style_class: this._mode === 'at-time' ? 'cpt-mode-button-selected' : 'cpt-mode-button',
+      style_class:
+        this._mode === 'at-time'
+          ? 'menu-category-button-selected cpt-mode-button'
+          : 'menu-category-button cpt-mode-button',
     });
     const countdownButton = new St.Button({
       label: 'Countdown',
-      style_class: this._mode === 'countdown' ? 'cpt-mode-button-selected' : 'cpt-mode-button',
+      style_class:
+        this._mode === 'countdown'
+          ? 'menu-category-button-selected cpt-mode-button'
+          : 'menu-category-button cpt-mode-button',
     });
     atTimeButton.connect('clicked', () => {
       this._mode = 'at-time';
@@ -354,16 +360,12 @@ class CinnamonPowerTimerApplet extends Applet.TextIconApplet {
     modeRow.addActor(modeBox);
     this.menu.addMenuItem(modeRow);
 
-    this.menu.addMenuItem(
-      new PopupMenu.PopupMenuItem(this._mode === 'at-time' ? 'Time' : 'Duration', {
-        reactive: false,
-      }),
-    );
+    this._addStaticLabel(this._mode === 'at-time' ? 'Time' : 'Duration');
     const inputRow = new PopupMenu.PopupBaseMenuItem({ reactive: false });
     this._timeEntry = new St.Entry({
       text: this._mode === 'at-time' ? this._atTimeValue : this._countdownValue,
       can_focus: true,
-      style_class: 'cpt-time-entry',
+      style_class: 'run-dialog-entry cpt-time-entry',
       hint_text: this._mode === 'at-time' ? 'HH:MM' : 'HH:MM:SS',
     });
     this._timeEntry.clutter_text.connect('text-changed', () => {
@@ -374,10 +376,31 @@ class CinnamonPowerTimerApplet extends Applet.TextIconApplet {
     inputRow.addActor(this._timeEntry, { expand: true });
     this.menu.addMenuItem(inputRow);
 
-    this.menu.addMenuItem(new PopupMenu.PopupMenuItem('Action', { reactive: false }));
+    this._addStaticLabel('Action');
     const actionCombo = new PopupMenu.PopupComboBoxMenuItem({});
+    const comboMenu = actionCombo._menu as DynamicCinnamonObject;
+    comboMenu.actor.add_style_class_name('cpt-action-menu');
+    if (typeof comboMenu.getActiveItem !== 'function') {
+      comboMenu.getActiveItem = () => comboMenu._getMenuItems()[comboMenu._activeItemPos] ?? null;
+    }
+    const originalOpen = comboMenu.open.bind(comboMenu);
+    comboMenu.open = () => {
+      originalOpen();
+      const [anchorX] = actionCombo.actor.get_transformed_position();
+      const [, parentY] = this.menu.actor.get_transformed_position();
+      const [, parentHeight] = this.menu.actor.get_transformed_size();
+      const [width, height] = comboMenu.actor.get_transformed_size();
+      const monitor = Main.layoutManager.findMonitorForActor(actionCombo.actor);
+      const position = positionDropdown(
+        anchorX,
+        parentY + parentHeight,
+        { width, height },
+        monitor,
+      );
+      comboMenu.actor.set_position(position.x, position.y);
+    };
     ACTIONS.forEach((action) => {
-      const item = new PopupMenu.PopupIconMenuItem(action.label, action.icon, St.IconType.SYMBOLIC);
+      const item = this._createIconMenuItem(action.label, action.icon);
       item.setSensitive(this._capabilities[action.id] === true);
       actionCombo.addMenuItem(item);
     });
@@ -395,26 +418,17 @@ class CinnamonPowerTimerApplet extends Applet.TextIconApplet {
     );
     this.menu.addMenuItem(actionCombo);
 
-    if (this._formError)
-      this.menu.addMenuItem(
-        new PopupMenu.PopupMenuItem(this._formError, { reactive: false, style_class: 'cpt-error' }),
-      );
-    const start = new PopupMenu.PopupIconMenuItem(
-      'Start Timer',
-      'media-playback-start-symbolic',
-      St.IconType.SYMBOLIC,
-    );
+    if (this._formError) this._addStaticLabel(this._formError, 'cpt-error');
+    this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+    const start = this._createIconMenuItem('Start Timer', 'media-playback-start-symbolic');
+    start.actor.add_style_class_name('cpt-primary-action');
     start.connect('activate', () => this._startTimer());
     this.menu.addMenuItem(start);
   }
 
   private _buildActiveMenu(): void {
     const action = ACTIONS.find((item) => item.id === this._state.action) ?? DEFAULT_ACTION;
-    this.menu.addMenuItem(
-      new PopupMenu.PopupIconMenuItem(action.label, action.icon, St.IconType.SYMBOLIC, {
-        reactive: false,
-      }),
-    );
+    this.menu.addMenuItem(this._createIconMenuItem(action.label, action.icon, { reactive: false }));
     this._addDetail('Remaining', formatRemaining(this._state.remaining_seconds ?? 0));
     this._addDetail('Mode', this._state.mode === 'at-time' ? 'At time' : 'Countdown');
     this._addDetail(
@@ -422,63 +436,50 @@ class CinnamonPowerTimerApplet extends Applet.TextIconApplet {
       this._state.original_value ?? '',
     );
     if (this._state.status === 'cancellation-paused') {
-      this.menu.addMenuItem(
-        new PopupMenu.PopupMenuItem('Cancellation confirmation is open.', {
-          reactive: false,
-          style_class: 'cpt-paused-text',
-        }),
-      );
+      this._addStaticLabel('Cancellation confirmation is open.', 'cpt-paused-text');
     } else {
-      const cancel = new PopupMenu.PopupIconMenuItem(
-        'Cancel Timer',
-        'edit-delete-symbolic',
-        St.IconType.SYMBOLIC,
-      );
+      const cancel = this._createIconMenuItem('Cancel Timer', 'edit-delete-symbolic');
       cancel.connect('activate', () => this._beginCancellation());
       this.menu.addMenuItem(cancel);
     }
   }
 
   private _buildTerminalMenu(): void {
-    this.menu.addMenuItem(
-      new PopupMenu.PopupMenuItem(
-        this._state.status === 'missed' ? 'Missed Timer' : 'Timer Failed',
-        { reactive: false, style_class: 'cpt-title' },
-      ),
+    this._addStaticLabel(
+      this._state.status === 'missed' ? 'Missed Timer' : 'Timer Failed',
+      'cpt-title',
     );
-    this.menu.addMenuItem(
-      new PopupMenu.PopupMenuItem(this._state.message || 'The timer could not complete.', {
-        reactive: false,
-      }),
-    );
-    const acknowledge = new PopupMenu.PopupIconMenuItem(
-      'Acknowledge',
-      'emblem-ok-symbolic',
-      St.IconType.SYMBOLIC,
-    );
+    this._addStaticLabel(this._state.message || 'The timer could not complete.');
+    const acknowledge = this._createIconMenuItem('Acknowledge', 'emblem-ok-symbolic');
     acknowledge.connect('activate', () => this._callNoArgs('AcknowledgeTerminalStateRemote'));
     this.menu.addMenuItem(acknowledge);
   }
 
   private _buildUnavailableMenu(): void {
-    this.menu.addMenuItem(
-      new PopupMenu.PopupMenuItem('Backend unavailable', {
-        reactive: false,
-        style_class: 'cpt-title',
-      }),
-    );
-    this.menu.addMenuItem(
-      new PopupMenu.PopupMenuItem(this._state.message || 'Install and start the timer service.', {
-        reactive: false,
-      }),
-    );
-    const retry = new PopupMenu.PopupIconMenuItem(
-      'Reconnect',
-      'view-refresh-symbolic',
-      St.IconType.SYMBOLIC,
-    );
+    this._addStaticLabel('Backend unavailable', 'cpt-title');
+    this._addStaticLabel(this._state.message || 'Install and start the timer service.');
+    const retry = this._createIconMenuItem('Reconnect', 'view-refresh-symbolic');
     retry.connect('activate', () => this._connectBackend());
     this.menu.addMenuItem(retry);
+  }
+
+  private _addStaticLabel(text: string, styleClass = 'cpt-section-label'): void {
+    const row = new PopupMenu.PopupBaseMenuItem({
+      reactive: false,
+      style_class: 'cpt-static-row',
+    });
+    row.addActor(new St.Label({ text, style_class: styleClass }));
+    this.menu.addMenuItem(row);
+  }
+
+  private _createIconMenuItem(
+    text: string,
+    icon: string,
+    params?: DynamicCinnamonObject,
+  ): DynamicCinnamonObject {
+    const item = new PopupMenu.PopupIconMenuItem(text, icon, St.IconType.SYMBOLIC, params);
+    item._icon.add_style_class_name('cpt-menu-icon');
+    return item;
   }
 
   private _addDetail(label: string, value: string): void {
