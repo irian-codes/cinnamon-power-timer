@@ -1,0 +1,51 @@
+.cpt-title {
+  font-weight: bold;
+}
+
+.cpt-mode-box {
+  spacing: 6px;
+}
+
+.cpt-mode-button,
+.cpt-mode-button-selected {
+  padding: 6px 12px;
+  border-radius: 4px;
+}
+
+.cpt-mode-button-selected {
+  background-color: rgba(128, 128, 128, 0.35);
+  font-weight: bold;
+}
+
+.cpt-time-entry {
+  width: 170px;
+  padding: 6px 10px;
+}
+
+.cpt-detail-value {
+  font-weight: bold;
+}
+
+.cpt-error,
+.cpt-warning-red {
+  color: #f66151;
+}
+
+.cpt-warning-yellow {
+  color: #f6d32d;
+}
+
+.cpt-paused,
+.cpt-paused-text {
+  color: #62a0ea;
+}
+
+.cpt-dialog-content {
+  spacing: 8px;
+  padding: 8px;
+}
+
+.cpt-dialog-title {
+  font-size: 1.2em;
+  font-weight: bold;
+}

@@ -14,13 +14,4 @@
     </defaults>
   </action>
 
-  <action id="org.irian.CinnamonPowerTimer.cancel-power-action">
-    <description>Cancel a Cinnamon Power Timer power action</description>
-    <message>Authentication is required to cancel this scheduled power action.</message>
-    <defaults>
-      <allow_any>no</allow_any>
-      <allow_inactive>no</allow_inactive>
-      <allow_active>auth_admin_keep</allow_active>
-    </defaults>
-  </action>
 </policyconfig>

@@ -1,0 +1,4 @@
+[D-BUS Service]
+Name=org.irian.CinnamonPowerTimer
+Exec=/usr/lib/cinnamon-power-timer/cinnamon_power_timer_service.py
+SystemdService=cinnamon-power-timer.service

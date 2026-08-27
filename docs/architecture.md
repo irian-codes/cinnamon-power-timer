@@ -4,7 +4,9 @@
 
 ### Cinnamon applet
 
-Path: `applet/cinnamon-power-timer@irian-codes/`
+Source: `applet/cinnamon-power-timer@irian-codes/src/`
+
+Generated output: `dist/applet/cinnamon-power-timer@irian-codes/`
 
 Owns UI only. It should communicate with the per-user timer service over the session bus.
 
@@ -24,9 +26,10 @@ Runs as a system service and exposes a narrow D-Bus surface for predefined power
 
 It must never accept arbitrary executables, shell fragments, or commands.
 
-## Intended IPC
+## IPC
 
-The exact interface is not finalized, but the target shape is:
+Payloads use JSON strings. This keeps the D-Bus boundary stable across
+Python and Cinnamon's GJS runtime while preserving strict method names.
 
 ### User service
 
@@ -34,20 +37,21 @@ Bus: session bus
 
 Name: `org.irian.CinnamonPowerTimer`
 
-Candidate methods:
+Methods:
 
-- `CreateTimer(mode, value, action, settings)`
+- `CreateTimer(requestJson)`
 - `GetState()`
 - `BeginCancellation()`
 - `AbortCancellation()`
 - `ConfirmCancellation()`
 - `AcknowledgeTerminalState()`
+- `GetCapabilities()`
 
-Candidate signals:
+Signals:
 
-- `StateChanged(state)`
-- `WarningCrossed(level)`
-- `TimerExpired(result)`
+- `StateChanged(stateJson)`
+- `WarningCrossed(warningJson)`
+- `TimerExpired(resultJson)`
 
 ### Privileged helper
 
@@ -55,13 +59,23 @@ Bus: system bus
 
 Name: `org.irian.CinnamonPowerTimer.Helper`
 
-Candidate methods:
+Methods:
 
+- `Schedule(sessionId, action, delayMilliseconds)`
+- `Pause()`
+- `Resume()`
+- `Cancel()`
 - `GetCapabilities()`
-- `Schedule(uid, sessionId, action, expiry)`
-- `Cancel(uid)`
 
-The helper should validate caller identity and authorize creation/cancellation with Polkit. At expiry it must re-check the owning graphical session with logind before executing any action.
+Signal:
+
+- `ActionFinished(uid, result, message)`
+
+The helper derives caller identity from the system bus. It verifies session
+ownership and checks logind capabilities. Polkit authorizes scheduling when
+logind reports a challenge. Cancellation, pause, and resume only affect the
+caller's own UID. At expiry it re-checks the owning graphical session through
+logind before executing any action.
 
 ## Lifecycle rules
 
@@ -74,3 +88,11 @@ The helper should validate caller identity and authorize creation/cancellation w
 - Reboot/shutdown: timer discarded.
 
 See `docs/plans/001-product-requirements.md` for the product-level specification.
+
+## Build boundaries
+
+- TypeScript is the only maintained applet implementation.
+- esbuild creates one GJS-compatible `applet.js` bundle.
+- Static applet assets are copied beside that bundle.
+- Generated applet files exist only under `dist/`.
+- Python domain logic remains independent from D-Bus adapters.
