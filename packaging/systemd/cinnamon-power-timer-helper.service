@@ -1,0 +1,17 @@
+[Unit]
+Description=Cinnamon Power Timer privileged helper
+After=dbus.service systemd-logind.service
+
+[Service]
+Type=dbus
+BusName=org.irian.CinnamonPowerTimer.Helper
+ExecStart=/usr/lib/cinnamon-power-timer/cinnamon_power_timer_helper.py
+User=root
+Group=root
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
