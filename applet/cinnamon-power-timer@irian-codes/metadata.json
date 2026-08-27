@@ -1,0 +1,7 @@
+{
+  "uuid": "cinnamon-power-timer@irian-codes",
+  "name": "Cinnamon Power Timer",
+  "description": "Create one per-user timer that locks, suspends, hibernates, reboots, or powers off when it expires.",
+  "max-instances": 1,
+  "version": "0.1.0"
+}
