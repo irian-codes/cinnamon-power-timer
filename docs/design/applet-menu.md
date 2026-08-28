@@ -54,6 +54,9 @@ Warning colors always reflect enabled thresholds and current remaining time.
 Starting inside a threshold applies its color immediately, even when its
 crossing notification is intentionally skipped.
 
+Active timer updates mutate the existing remaining-time label. They do not
+rebuild menu actors, preserving hover and focus until the menu closes normally.
+
 ## Implementation constraints
 
 - Preserve the Cinnamon 6.6 `getActiveItem` compatibility shim.

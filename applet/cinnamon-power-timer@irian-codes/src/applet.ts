@@ -232,6 +232,8 @@ class CinnamonPowerTimerApplet extends Applet.TextIconApplet {
   private _countdownButton!: DynamicCinnamonObject;
   private _timeSectionLabel!: DynamicCinnamonObject;
   private _startButton!: DynamicCinnamonObject;
+  private _remainingDetailLabel: DynamicCinnamonObject | null;
+  private _renderedMenuStatus: TimerStatus | null;
   private _formErrorRow!: DynamicCinnamonObject;
   private _formErrorLabel!: DynamicCinnamonObject;
   private _updatingTimeEntry = false;
@@ -266,6 +268,8 @@ class CinnamonPowerTimerApplet extends Applet.TextIconApplet {
     this._removed = false;
     this._cancellationDialog = null;
     this._startPending = false;
+    this._remainingDetailLabel = null;
+    this._renderedMenuStatus = null;
 
     this.set_applet_tooltip('Cinnamon Power Timer');
     this._menuManager = new PopupMenu.PopupMenuManager(this);
@@ -362,16 +366,32 @@ class CinnamonPowerTimerApplet extends Applet.TextIconApplet {
       else if (this._state.warning_level === 'yellow')
         this.actor.add_style_class_name('cpt-warning-yellow');
     }
-    this._renderMenu();
+    if (!this._refreshActiveMenu()) this._renderMenu();
   }
 
   private _renderMenu(): void {
+    this._remainingDetailLabel = null;
     this.menu.removeAll();
     if (this._state.status === 'idle') this._buildNewTimerMenu();
     else if (this._state.status === 'unavailable') this._buildUnavailableMenu();
     else if (this._state.status === 'missed' || this._state.status === 'failed')
       this._buildTerminalMenu();
     else this._buildActiveMenu();
+    this._renderedMenuStatus = this._state.status;
+  }
+
+  private _refreshActiveMenu(): boolean {
+    const status = this._state.status;
+    if (
+      (status !== 'active' && status !== 'cancellation-paused') ||
+      this._renderedMenuStatus !== status ||
+      !this._remainingDetailLabel ||
+      this._remainingDetailLabel.is_finalized()
+    ) {
+      return false;
+    }
+    this._remainingDetailLabel.set_text(formatRemaining(this._state.remaining_seconds ?? 0));
+    return true;
   }
 
   private _buildNewTimerMenu(): void {
@@ -584,7 +604,10 @@ class CinnamonPowerTimerApplet extends Applet.TextIconApplet {
   private _buildActiveMenu(): void {
     const action = ACTIONS.find((item) => item.id === this._state.action) ?? DEFAULT_ACTION;
     this.menu.addMenuItem(this._createIconMenuItem(action.label, action.icon, { reactive: false }));
-    this._addDetail('Remaining', formatRemaining(this._state.remaining_seconds ?? 0));
+    this._remainingDetailLabel = this._addDetail(
+      'Remaining',
+      formatRemaining(this._state.remaining_seconds ?? 0),
+    );
     this._addDetail('Mode', this._state.mode === 'at-time' ? 'At time' : 'Countdown');
     this._addDetail(
       this._state.mode === 'at-time' ? 'Target time' : 'Duration',
@@ -642,14 +665,16 @@ class CinnamonPowerTimerApplet extends Applet.TextIconApplet {
     return item;
   }
 
-  private _addDetail(label: string, value: string): void {
+  private _addDetail(label: string, value: string): DynamicCinnamonObject {
     const row = new PopupMenu.PopupBaseMenuItem({ reactive: false });
     row.addActor(new St.Label({ text: label }));
-    row.addActor(new St.Label({ text: value, style_class: 'cpt-detail-value' }), {
+    const valueLabel = new St.Label({ text: value, style_class: 'cpt-detail-value' });
+    row.addActor(valueLabel, {
       align: St.Align.END,
       span: -1,
     });
     this.menu.addMenuItem(row);
+    return valueLabel;
   }
 
   private _startTimer(confirmedTomorrow = false): void {

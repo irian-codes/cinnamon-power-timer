@@ -9,6 +9,7 @@
 - Derive warning colors from thresholds, independent from notification state.
 - Gate timer creation while its D-Bus request remains pending.
 - Validate raw countdown numbers before integer conversion.
+- Update active-menu countdown labels without rebuilding menu actors.
 - Settle cancellation dialogs idempotently on close, destroy, or visibility loss.
 - Keep Cinnamon and D-Bus adapters thin around testable domain logic.
 - Put pure Python logic under `src/cinnamon_power_timer/`.
