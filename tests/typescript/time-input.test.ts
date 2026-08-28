@@ -30,9 +30,11 @@ describe('time input', () => {
     expect(formatTimeDigits(digits, 'countdown')).toBe('03 d 12 h 45 m');
   });
 
-  it('supports countdowns through thirty days', () => {
+  it('preserves a day overflow digit for validation', () => {
     expect(sanitizeTimeDigits('30 d 00 h 00 m', 'countdown')).toBe('300000');
-    expect(sanitizeTimeDigits('3000001', 'countdown')).toBe('300000');
+    expect(sanitizeTimeDigits('100 d 00 h 00 m', 'countdown')).toBe('1000000');
+    expect(formatTimeDigits('1000000', 'countdown')).toBe('100 d 00 h 00 m');
+    expect(appendTimeDigit('1000000', '0', 'countdown', false)).toBe('1000000');
   });
 
   it('sanitizes pasted input and handles replacement', () => {

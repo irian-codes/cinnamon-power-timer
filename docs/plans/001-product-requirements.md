@@ -150,7 +150,9 @@ There is no extra confirmation for Reboot or Power Off beyond pressing Start Tim
 Countdown mode represents elapsed running time.
 
 Countdown input uses whole days, hours, and minutes. Its maximum defaults to 30
-days and is configurable between 1 and 99 days in Applet Settings.
+days and is configurable between 1 and 99 days in Applet Settings. Individual
+fields reject values above 99 days, 23 hours, or 59 minutes with unit-specific
+errors. The resulting total must also remain within the configured maximum.
 
 There is no normal Pause / Resume feature.
 

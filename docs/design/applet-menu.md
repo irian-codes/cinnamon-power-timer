@@ -41,7 +41,9 @@ field selects its current value, and non-digit input is ignored. At-time entry
 uses hours and minutes, so typing `2034` produces `20:34`. Countdown entry uses
 days, hours, and minutes, so typing `031245` produces `03 d 12 h 45 m`. Its
 minimum is one minute. Applet Settings controls its maximum, defaulting to 30
-days and allowing up to 99 days.
+days and allowing up to 99 days. Duration fields reject values above `99 d`,
+`23 h`, or `59 m` with a unit-specific error. The configured total maximum is
+validated separately.
 
 The active panel label offers unit and colon formats. Unit format omits zero
 day, hour, and minute parts. Colon format omits unused leading positions while

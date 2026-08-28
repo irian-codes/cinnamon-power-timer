@@ -39,13 +39,16 @@ export function parseTimerValue(
   const configuredMaximum = Number.isFinite(maxCountdownDays)
     ? Math.max(1, Math.min(99, Math.floor(maxCountdownDays)))
     : 30;
-  const match = /^(\d{1,2})\s*d\s*(\d{2})\s*h\s*(\d{2})\s*m$/i.exec(normalized);
-  const days = Number(match?.[1]);
-  const hours = Number(match?.[2]);
-  const minutes = Number(match?.[3]);
-  if (!match || hours > 23 || minutes > 59) {
+  const match = /^(\d+)\s*d\s*(\d+)\s*h\s*(\d+)\s*m$/i.exec(normalized);
+  if (!match) {
     throw new Error('Enter duration using DD d HH h MM m.');
   }
+  const days = Number(match[1]);
+  const hours = Number(match[2]);
+  const minutes = Number(match[3]);
+  if (days > 99) throw new Error('You cannot input more than 99 d.');
+  if (hours > 23) throw new Error('You cannot input more than 23 h.');
+  if (minutes > 59) throw new Error('You cannot input more than 59 m.');
   const durationSeconds = days * 86_400 + hours * 3_600 + minutes * 60;
   if (durationSeconds < 60) {
     throw new Error('Duration requires at least one minute.');

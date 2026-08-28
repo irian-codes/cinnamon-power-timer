@@ -1,7 +1,7 @@
 import type { TimerMode } from './timer-request';
 
 export function maxTimeDigits(mode: TimerMode): number {
-  return mode === 'countdown' ? 6 : 4;
+  return mode === 'countdown' ? 7 : 4;
 }
 
 export function sanitizeTimeDigits(value: string, mode: TimerMode): string {
@@ -11,7 +11,7 @@ export function sanitizeTimeDigits(value: string, mode: TimerMode): string {
 export function formatTimeDigits(digits: string, mode: TimerMode): string {
   if (mode === 'countdown') {
     const padded = digits.padStart(6, '0');
-    return `${padded.slice(0, 2)} d ${padded.slice(2, 4)} h ${padded.slice(4, 6)} m`;
+    return `${padded.slice(0, -4)} d ${padded.slice(-4, -2)} h ${padded.slice(-2)} m`;
   }
   const padded = digits.padStart(4, '0');
   return `${padded.slice(0, -2)}:${padded.slice(-2)}`;
