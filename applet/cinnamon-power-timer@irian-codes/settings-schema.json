@@ -15,6 +15,15 @@
     "step": 1,
     "description": "Maximum countdown duration (days)"
   },
+  "remaining-time-format": {
+    "type": "combobox",
+    "default": "units",
+    "options": {
+      "02 d 12 h 23 m": "units",
+      "02:12:23": "colon"
+    },
+    "description": "Panel remaining time format"
+  },
   "warning-one-enabled": {
     "type": "checkbox",
     "default": true,

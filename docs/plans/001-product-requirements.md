@@ -81,9 +81,10 @@ Display:
 
 Countdown formatting:
 
-- Under 1 hour → `42:17`
-- 1–24 hours → `3:42:17`
-- 1+ days → `2d 03:42`
+- Unit format → `02 d 12 h 23 m`
+- Colon format → `02:12:23`
+- Zero leading unit parts are omitted dynamically.
+- Seconds appear only below one minute → `42 s`
 
 The action is conveyed by icon rather than text.
 
@@ -148,8 +149,8 @@ There is no extra confirmation for Reboot or Power Off beyond pressing Start Tim
 
 Countdown mode represents elapsed running time.
 
-Countdown input uses whole days and hours. Its maximum defaults to 30 days and
-is configurable between 1 and 99 days in Applet Settings.
+Countdown input uses whole days, hours, and minutes. Its maximum defaults to 30
+days and is configurable between 1 and 99 days in Applet Settings.
 
 There is no normal Pause / Resume feature.
 
@@ -381,11 +382,12 @@ MVP settings:
 
 - Cancellation delay — default 3 seconds; 0 disables delay
 - Maximum countdown duration — default 30 days; configurable from 1–99 days
+- Panel remaining time format — unit labels or colon positions
 - Warning 1 — default 30 minutes; configurable/disableable
 - Warning 2 — default 5 minutes; configurable/disableable
 - Cancel timer on user switch — default Off
 
-Other display customization is excluded from MVP.
+Further display customization is excluded from MVP.
 
 ## 24. No Overlay Window
 

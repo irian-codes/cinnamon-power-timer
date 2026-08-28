@@ -1,5 +1,5 @@
 import { CancellationCountdown, CancellationLifecycle } from './cancellation-lifecycle';
-import { formatRemaining } from './timer-format';
+import { formatRemaining, type RemainingTimeFormat } from './timer-format';
 import { positionDropdown } from './menu-layout';
 import {
   appendTimeDigit,
@@ -243,6 +243,7 @@ class CinnamonPowerTimerApplet extends Applet.TextIconApplet {
   private warningTwoMinutes!: number;
   private cancelOnUserSwitch!: boolean;
   private maximumCountdownDays!: number;
+  private remainingTimeFormat!: RemainingTimeFormat;
   private menu: DynamicCinnamonObject;
   private settings: DynamicCinnamonObject;
 
@@ -271,6 +272,7 @@ class CinnamonPowerTimerApplet extends Applet.TextIconApplet {
     this.settings = new Settings.AppletSettings(this, metadata.uuid, instanceId);
     this.settings.bind('cancellation-delay-seconds', 'cancellationDelay');
     this.settings.bind('maximum-countdown-days', 'maximumCountdownDays');
+    this.settings.bind('remaining-time-format', 'remainingTimeFormat', () => this._render());
     this.settings.bind('warning-one-enabled', 'warningOneEnabled');
     this.settings.bind('warning-one-minutes', 'warningOneMinutes');
     this.settings.bind('warning-two-enabled', 'warningTwoEnabled');
@@ -348,7 +350,9 @@ class CinnamonPowerTimerApplet extends Applet.TextIconApplet {
       this.set_applet_icon_symbolic_name(
         status === 'cancellation-paused' ? 'media-playback-pause-symbolic' : action.icon,
       );
-      this.set_applet_label(formatRemaining(this._state.remaining_seconds ?? 0));
+      this.set_applet_label(
+        formatRemaining(this._state.remaining_seconds ?? 0, this.remainingTimeFormat),
+      );
       if (status === 'cancellation-paused') this.actor.add_style_class_name('cpt-paused');
       else if (this._state.warning_level === 'red')
         this.actor.add_style_class_name('cpt-warning-red');

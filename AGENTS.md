@@ -5,6 +5,7 @@
 - Preserve the Cinnamon 6.6 combo-menu compatibility shim before `setActiveItem`.
 - Initialize registered GObject fields only inside `_init`; class initializers run afterward.
 - Keep countdown limits aligned across the applet, service, and helper.
+- Keep panel countdown formatting centralized in `timer-format.ts`.
 - Settle cancellation dialogs idempotently on close, destroy, or visibility loss.
 - Keep Cinnamon and D-Bus adapters thin around testable domain logic.
 - Put pure Python logic under `src/cinnamon_power_timer/`.

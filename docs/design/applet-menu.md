@@ -43,6 +43,11 @@ days, hours, and minutes, so typing `031245` produces `03 d 12 h 45 m`. Its
 minimum is one minute. Applet Settings controls its maximum, defaulting to 30
 days and allowing up to 99 days.
 
+The active panel label offers unit and colon formats. Unit format omits zero
+day, hour, and minute parts. Colon format omits unused leading positions while
+preserving internal zero positions. Both formats show seconds only below one
+minute, using `SS s`.
+
 ## Implementation constraints
 
 - Preserve the Cinnamon 6.6 `getActiveItem` compatibility shim.
@@ -63,3 +68,4 @@ days and allowing up to 99 days.
 - Mode switches, action selection, and invalid input keep the menu open.
 - At-time displays `HH:MM`; Countdown displays `DD d HH h MM m`.
 - Warning backgrounds keep panel labels and icons readable.
+- Panel formats match `02 d 12 h 23 m` and `02:12:23` setting examples.
