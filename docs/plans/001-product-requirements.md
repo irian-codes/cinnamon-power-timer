@@ -178,6 +178,9 @@ While cancellation confirmation is open:
 
 If cancellation is abandoned, the timer resumes from exactly the same remaining duration.
 
+Closing or hiding the confirmation dialog abandons cancellation. The paused
+timer menu also provides a Keep Timer recovery action.
+
 If the cancellation frontend disappears due to Cinnamon restart, applet reload, graphical failure, or user switch, the cancellation attempt is automatically abandoned and the backend resumes the timer.
 
 ## 13. Warning System

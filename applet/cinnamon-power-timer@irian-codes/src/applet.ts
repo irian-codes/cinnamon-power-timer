@@ -1,3 +1,4 @@
+import { CancellationLifecycle } from './cancellation-lifecycle';
 import { formatRemaining } from './timer-format';
 import { positionDropdown } from './menu-layout';
 import {
@@ -136,16 +137,14 @@ const ACTIONS: readonly TimerActionDefinition[] = [
 var CancellationDialog = GObject.registerClass(
   class CancellationDialog extends ModalDialog.ModalDialog {
     private _remaining = 0;
-    private _confirmed = false;
-    private _abortCallback: () => void = () => undefined;
+    private _lifecycle!: CancellationLifecycle;
     private _timeoutId = 0;
     private _confirmButton!: DynamicCinnamonObject;
 
     _init(delay: number, confirmCallback: () => void, abortCallback: () => void): void {
       super._init();
       this._remaining = delay;
-      this._confirmed = false;
-      this._abortCallback = abortCallback;
+      this._lifecycle = new CancellationLifecycle(abortCallback);
       this._timeoutId = 0;
 
       const box = new St.BoxLayout({ vertical: true, style_class: 'cpt-dialog-content' });
@@ -155,23 +154,30 @@ var CancellationDialog = GObject.registerClass(
 
       this.addButton({
         label: 'Keep Timer',
-        action: () => this.destroy(),
+        action: () => this.close(),
         key: Clutter.KEY_Escape,
       });
       this._confirmButton = this.addButton({
         label: this._buttonLabel(),
         action: () => {
           if (this._remaining > 0) return;
-          this._confirmed = true;
+          if (!this._lifecycle.confirm()) return;
+          this._stopCountdown();
           confirmCallback();
-          this.destroy();
+          this.close();
         },
         destructive_action: true,
       });
       this._confirmButton.reactive = delay === 0;
-      this.connect('destroy', () => {
-        if (this._timeoutId) Mainloop.source_remove(this._timeoutId);
-        if (!this._confirmed) this._abortCallback();
+      this.connect('closed', () => this._dismiss());
+      this.connect('destroy', () => this._dismiss());
+      this.connect('notify::visible', () => {
+        if (this.visible) return;
+        this._dismiss();
+        Mainloop.idle_add(() => {
+          if (!this.is_finalized()) this.destroy();
+          return GLib.SOURCE_REMOVE;
+        });
       });
       if (delay > 0) {
         this._timeoutId = Mainloop.timeout_add_seconds(1, () => {
@@ -189,6 +195,17 @@ var CancellationDialog = GObject.registerClass(
 
     private _buttonLabel(): string {
       return this._remaining > 0 ? `Cancel Timer (${this._remaining})` : 'Cancel Timer';
+    }
+
+    private _dismiss(): void {
+      this._stopCountdown();
+      this._lifecycle.dismiss();
+    }
+
+    private _stopCountdown(): void {
+      if (!this._timeoutId) return;
+      Mainloop.source_remove(this._timeoutId);
+      this._timeoutId = 0;
     }
   },
 );
@@ -558,6 +575,9 @@ class CinnamonPowerTimerApplet extends Applet.TextIconApplet {
     );
     if (this._state.status === 'cancellation-paused') {
       this._addStaticLabel('Cancellation confirmation is open.', 'cpt-paused-text');
+      const keep = this._createIconMenuItem('Keep Timer', 'media-playback-start-symbolic');
+      keep.connect('activate', () => this._abortCancellation());
+      this.menu.addMenuItem(keep);
     } else {
       const cancel = this._createIconMenuItem('Cancel Timer', 'edit-delete-symbolic');
       cancel.connect('activate', () => this._beginCancellation());
@@ -688,13 +708,17 @@ class CinnamonPowerTimerApplet extends Applet.TextIconApplet {
         return;
       }
       this._acceptState(result[0]);
-      this._cancellationDialog = new CancellationDialog(
-        this._state.cancellation_delay ?? 0,
-        () => this._confirmCancellation(),
-        () => this._abortCancellation(),
-      );
-      this._cancellationDialog.open();
+      this._openCancellationDialog();
     });
+  }
+
+  private _openCancellationDialog(): void {
+    this._cancellationDialog = new CancellationDialog(
+      this._state.cancellation_delay ?? 0,
+      () => this._confirmCancellation(),
+      () => this._abortCancellation(),
+    );
+    this._cancellationDialog.open();
   }
 
   private _confirmCancellation(): void {
