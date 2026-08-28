@@ -113,7 +113,7 @@ New Timer
 [ At time ] [ Countdown ]
 
 Duration
-[ 00 : 45 ]
+[ 00 d 00 h 01 m ]
 
 Action
 [ Lock ▼ ]
@@ -132,8 +132,9 @@ Users may explicitly switch to Countdown.
 Mode and action selection keep the setup pane open. It closes only after a
 timer starts successfully.
 
-Both inputs accept digits only and insert the colon automatically. Typing
-`2034` produces `20:34`. Countdown uses hours and minutes without seconds.
+Both inputs accept digits only and insert separators automatically. At-time
+typing `2034` produces `20:34`. Countdown typing `031245` produces
+`03 d 12 h 45 m`. Countdown requires at least one minute.
 
 ## 9. At-Time Semantics
 
@@ -146,6 +147,9 @@ There is no extra confirmation for Reboot or Power Off beyond pressing Start Tim
 ## 10. Countdown Semantics
 
 Countdown mode represents elapsed running time.
+
+Countdown input uses whole days and hours. Its maximum defaults to 30 days and
+is configurable between 1 and 99 days in Applet Settings.
 
 There is no normal Pause / Resume feature.
 
@@ -376,6 +380,7 @@ A small bounded retry is acceptable only for clearly transient infrastructure fa
 MVP settings:
 
 - Cancellation delay — default 3 seconds; 0 disables delay
+- Maximum countdown duration — default 30 days; configurable from 1–99 days
 - Warning 1 — default 30 minutes; configurable/disableable
 - Warning 2 — default 5 minutes; configurable/disableable
 - Cancel timer on user switch — default Off
@@ -446,6 +451,8 @@ Package contents include:
 - At-time mode opens by default.
 - Lock is selected by default.
 - User can create At-time or Countdown timers.
+- Countdown uses explicit day and hour units.
+- Countdown respects the configured maximum duration.
 - Past At-time values resolve to tomorrow after confirmation.
 - Only one active timer exists per user.
 

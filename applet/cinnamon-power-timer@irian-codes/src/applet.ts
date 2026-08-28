@@ -107,6 +107,7 @@ interface CreateTimerRequest {
     warning_two_enabled: boolean;
     warning_two_minutes: number;
     cancel_on_user_switch: boolean;
+    maximum_countdown_days: number;
   };
 }
 
@@ -241,6 +242,7 @@ class CinnamonPowerTimerApplet extends Applet.TextIconApplet {
   private warningTwoEnabled!: boolean;
   private warningTwoMinutes!: number;
   private cancelOnUserSwitch!: boolean;
+  private maximumCountdownDays!: number;
   private menu: DynamicCinnamonObject;
   private settings: DynamicCinnamonObject;
 
@@ -256,7 +258,7 @@ class CinnamonPowerTimerApplet extends Applet.TextIconApplet {
     this._mode = 'at-time';
     this._action = 'lock';
     this._atTimeDigits = '1900';
-    this._countdownDigits = '0045';
+    this._countdownDigits = '000001';
     this._proxy = null;
     this._removed = false;
     this._cancellationDialog = null;
@@ -268,6 +270,7 @@ class CinnamonPowerTimerApplet extends Applet.TextIconApplet {
     this._menuManager.addMenu(this.menu);
     this.settings = new Settings.AppletSettings(this, metadata.uuid, instanceId);
     this.settings.bind('cancellation-delay-seconds', 'cancellationDelay');
+    this.settings.bind('maximum-countdown-days', 'maximumCountdownDays');
     this.settings.bind('warning-one-enabled', 'warningOneEnabled');
     this.settings.bind('warning-one-minutes', 'warningOneMinutes');
     this.settings.bind('warning-two-enabled', 'warningTwoEnabled');
@@ -386,10 +389,10 @@ class CinnamonPowerTimerApplet extends Applet.TextIconApplet {
     this._timeSectionLabel = this._addStaticLabel(this._mode === 'at-time' ? 'Time' : 'Duration');
     const inputRow = new PopupMenu.PopupBaseMenuItem({ reactive: false });
     this._timeEntry = new St.Entry({
-      text: formatTimeDigits(this._currentTimeDigits()),
+      text: formatTimeDigits(this._currentTimeDigits(), this._mode),
       can_focus: true,
       style_class: 'run-dialog-entry cpt-time-entry',
-      hint_text: 'HH:MM',
+      hint_text: this._mode === 'at-time' ? 'HH:MM' : 'DD d HH h MM m',
     });
     this._timeEntry.clutter_text.connect('key-focus-in', () => {
       this._timeEntry.clutter_text.set_selection(0, -1);
@@ -489,6 +492,7 @@ class CinnamonPowerTimerApplet extends Applet.TextIconApplet {
     this._atTimeButton.set_style_class_name(this._modeButtonStyle('at-time'));
     this._countdownButton.set_style_class_name(this._modeButtonStyle('countdown'));
     this._timeSectionLabel.set_text(mode === 'at-time' ? 'Time' : 'Duration');
+    this._timeEntry.hint_text = mode === 'at-time' ? 'HH:MM' : 'DD d HH h MM m';
     this._replaceTimeInputOnNextDigit = true;
     this._updateTimeEntry();
     this._setFormError(null);
@@ -505,7 +509,7 @@ class CinnamonPowerTimerApplet extends Applet.TextIconApplet {
 
   private _updateTimeEntry(): void {
     this._updatingTimeEntry = true;
-    this._timeEntry.set_text(formatTimeDigits(this._currentTimeDigits()));
+    this._timeEntry.set_text(formatTimeDigits(this._currentTimeDigits(), this._mode));
     this._timeEntry.clutter_text.set_cursor_position(-1);
     this._updatingTimeEntry = false;
   }
@@ -680,7 +684,7 @@ class CinnamonPowerTimerApplet extends Applet.TextIconApplet {
 
   private _buildRequest(confirmedTomorrow: boolean): CreateTimerRequest {
     const value = this._timeEntry.get_text().trim();
-    const parsed = parseTimerValue(this._mode, value);
+    const parsed = parseTimerValue(this._mode, value, new Date(), this.maximumCountdownDays);
     const request: CreateTimerRequest = {
       mode: this._mode,
       action: this._action,
@@ -693,6 +697,7 @@ class CinnamonPowerTimerApplet extends Applet.TextIconApplet {
         warning_two_enabled: this.warningTwoEnabled,
         warning_two_minutes: this.warningTwoMinutes,
         cancel_on_user_switch: this.cancelOnUserSwitch,
+        maximum_countdown_days: this.maximumCountdownDays,
       },
     };
     if (parsed.mode === 'at-time') {

@@ -35,6 +35,9 @@ class TimerStatus(StrEnum):
     FAILED = "failed"
 
 
+MAX_COUNTDOWN_DAYS = 99
+
+
 @dataclass
 class WarningSettings:
     enabled: bool
@@ -103,8 +106,12 @@ class TimerEngine:
         now = now or local_now()
         if mode == TimerMode.COUNTDOWN:
             seconds = int(request.get("duration_seconds", 0))
-            if seconds < 60 or seconds > 7 * 24 * 60 * 60:
-                raise ValueError("Countdown must be between one minute and seven days")
+            settings = request.get("settings", {})
+            maximum_days = max(1, min(MAX_COUNTDOWN_DAYS, int(settings.get("maximum_countdown_days", 30))))
+            if seconds < 60:
+                raise ValueError("Countdown requires at least one minute")
+            if seconds > maximum_days * 24 * 60 * 60:
+                raise ValueError(f"Countdown cannot exceed {maximum_days} days")
             if seconds % 60:
                 raise ValueError("Countdown must use whole minutes")
             return float(seconds), None, format_duration_value(seconds)
@@ -183,9 +190,10 @@ class TimerEngine:
 
 
 def format_duration_value(seconds: int) -> str:
-    hours, remainder = divmod(seconds, 3600)
+    days, remainder = divmod(seconds, 24 * 60 * 60)
+    hours, remainder = divmod(remainder, 60 * 60)
     minutes = remainder // 60
-    return f"{hours:02d}:{minutes:02d}"
+    return f"{days:02d} d {hours:02d} h {minutes:02d} m"
 
 
 def local_now() -> datetime:

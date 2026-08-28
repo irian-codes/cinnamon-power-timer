@@ -36,10 +36,12 @@ Mode and action changes keep the setup menu open. Only successfully starting a
 timer closes it. The action dropdown closes after selection without closing its
 parent menu.
 
-Both time fields use a digit-entry mask ending in hours and minutes. Focusing
-the field selects its current value. Typing `2034` produces `20:34`; non-digit
-characters are ignored. At-time accepts four digits. Countdown accepts five,
-supporting durations through `168:00` without seconds.
+At-time uses a four-digit mask. Countdown uses a six-digit mask. Focusing either
+field selects its current value, and non-digit input is ignored. At-time entry
+uses hours and minutes, so typing `2034` produces `20:34`. Countdown entry uses
+days, hours, and minutes, so typing `031245` produces `03 d 12 h 45 m`. Its
+minimum is one minute. Applet Settings controls its maximum, defaulting to 30
+days and allowing up to 99 days.
 
 ## Implementation constraints
 
@@ -59,5 +61,5 @@ supporting durations through `168:00` without seconds.
 - Popup contents remain visible on every attached monitor.
 - The setup menu remains compact at default text scaling.
 - Mode switches, action selection, and invalid input keep the menu open.
-- Both fields accept digit-only entry and display `HH:MM`.
+- At-time displays `HH:MM`; Countdown displays `DD d HH h MM m`.
 - Warning backgrounds keep panel labels and icons readable.

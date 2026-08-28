@@ -7,6 +7,14 @@
     "step": 1,
     "description": "Cancellation delay (seconds)"
   },
+  "maximum-countdown-days": {
+    "type": "spinbutton",
+    "default": 30,
+    "min": 1,
+    "max": 99,
+    "step": 1,
+    "description": "Maximum countdown duration (days)"
+  },
   "warning-one-enabled": {
     "type": "checkbox",
     "default": true,
