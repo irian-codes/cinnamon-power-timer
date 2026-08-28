@@ -35,11 +35,25 @@ class TimerStatus(StrEnum):
     FAILED = "failed"
 
 
+MAX_COUNTDOWN_DAYS = 99
+
+
 @dataclass
 class WarningSettings:
     enabled: bool
     seconds: int
     fired: bool = False
+
+
+def warning_level_for_remaining(warnings: list[WarningSettings], remaining: float) -> str:
+    level = "normal"
+    for index, warning in enumerate(warnings):
+        if not warning.enabled or remaining > warning.seconds:
+            continue
+        if index > 0:
+            return "red"
+        level = "yellow"
+    return level
 
 
 @dataclass
@@ -102,9 +116,23 @@ class TimerEngine:
         mode = TimerMode(request["mode"])
         now = now or local_now()
         if mode == TimerMode.COUNTDOWN:
-            seconds = int(request.get("duration_seconds", 0))
-            if seconds < 1 or seconds > 7 * 24 * 60 * 60:
-                raise ValueError("Countdown must be between one second and seven days")
+            duration_value = request.get("duration_seconds", 0)
+            if (
+                isinstance(duration_value, bool)
+                or not isinstance(duration_value, (int, float))
+                or not math.isfinite(duration_value)
+                or duration_value % 1
+            ):
+                raise ValueError("Countdown must use whole minutes")
+            seconds = int(duration_value)
+            settings = request.get("settings", {})
+            maximum_days = max(1, min(MAX_COUNTDOWN_DAYS, int(settings.get("maximum_countdown_days", 30))))
+            if seconds < 60:
+                raise ValueError("Countdown requires at least one minute")
+            if seconds > maximum_days * 24 * 60 * 60:
+                raise ValueError(f"Countdown cannot exceed {maximum_days} days")
+            if seconds % 60:
+                raise ValueError("Countdown must use whole minutes")
             return float(seconds), None, format_duration_value(seconds)
 
         value = str(request.get("time", ""))
@@ -149,6 +177,7 @@ class TimerEngine:
             cancellation_delay=max(0, min(30, int(settings.get("cancellation_delay_seconds", 3)))),
             cancel_on_user_switch=bool(settings.get("cancel_on_user_switch", False)),
             warnings=warnings,
+            warning_level=warning_level_for_remaining(warnings, duration),
         )
         return self.timer
 
@@ -181,9 +210,10 @@ class TimerEngine:
 
 
 def format_duration_value(seconds: int) -> str:
-    hours, remainder = divmod(seconds, 3600)
-    minutes, seconds = divmod(remainder, 60)
-    return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+    days, remainder = divmod(seconds, 24 * 60 * 60)
+    hours, remainder = divmod(remainder, 60 * 60)
+    minutes = remainder // 60
+    return f"{days:02d} d {hours:02d} h {minutes:02d} m"
 
 
 def local_now() -> datetime:

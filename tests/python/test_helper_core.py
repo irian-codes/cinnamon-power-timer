@@ -10,7 +10,7 @@ def test_validate_action_rejects_unknown_values() -> None:
         validate_action("arbitrary-command")
 
 
-@pytest.mark.parametrize("delay", [0, 604_800_001])
+@pytest.mark.parametrize("delay", [0, 8_553_600_001])
 def test_validate_delay_rejects_out_of_range_values(delay: int) -> None:
     with pytest.raises(ValueError, match="between one millisecond"):
         validate_delay(delay)

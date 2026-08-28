@@ -81,9 +81,10 @@ Display:
 
 Countdown formatting:
 
-- Under 1 hour → `42:17`
-- 1–24 hours → `3:42:17`
-- 1+ days → `2d 03:42`
+- Unit format → `02 d 12 h 23 m`
+- Colon format → `02:12:23`
+- Zero leading unit parts are omitted dynamically.
+- Seconds appear only below one minute → `42 s`
 
 The action is conveyed by icon rather than text.
 
@@ -113,7 +114,7 @@ New Timer
 [ At time ] [ Countdown ]
 
 Duration
-[ 00 : 45 : 00 ]
+[ 00 d 00 h 01 m ]
 
 Action
 [ Lock ▼ ]
@@ -129,6 +130,13 @@ Warning configuration, cancellation delay, and other preferences belong in Apple
 
 Users may explicitly switch to Countdown.
 
+Mode and action selection keep the setup pane open. It closes only after a
+timer starts successfully.
+
+Both inputs accept digits only and insert separators automatically. At-time
+typing `2034` produces `20:34`. Countdown typing `031245` produces
+`03 d 12 h 45 m`. Countdown requires at least one minute.
+
 ## 9. At-Time Semantics
 
 If the requested clock time is later today, schedule it for today.
@@ -140,6 +148,11 @@ There is no extra confirmation for Reboot or Power Off beyond pressing Start Tim
 ## 10. Countdown Semantics
 
 Countdown mode represents elapsed running time.
+
+Countdown input uses whole days, hours, and minutes. Its maximum defaults to 30
+days and is configurable between 1 and 99 days in Applet Settings. Individual
+fields reject values above 99 days, 23 hours, or 59 minutes with unit-specific
+errors. The resulting total must also remain within the configured maximum.
 
 There is no normal Pause / Resume feature.
 
@@ -172,6 +185,9 @@ While cancellation confirmation is open:
 
 If cancellation is abandoned, the timer resumes from exactly the same remaining duration.
 
+Closing or hiding the confirmation dialog abandons cancellation. The paused
+timer menu also provides a Keep Timer recovery action.
+
 If the cancellation frontend disappears due to Cinnamon restart, applet reload, graphical failure, or user switch, the cancellation attempt is automatically abandoned and the backend resumes the timer.
 
 ## 13. Warning System
@@ -183,13 +199,19 @@ Default warning milestones:
 
 Both thresholds are configurable and independently disableable.
 
-Warnings fire only when a running timer crosses a threshold. If a timer starts below a threshold, that warning is skipped.
+Warning notifications fire only when a running timer crosses a threshold. If a
+timer starts below a threshold, that notification is skipped. Its panel color
+still reflects the current warning threshold immediately.
 
 Each warning milestone fires at most once per timer.
 
 If warnings are crossed while another Unix user is active, defer them. When the timer owner returns, send only the most severe currently applicable missed warning.
 
 While cancellation confirmation has paused the timer, use a distinct paused visual state.
+
+After the first warning threshold, the panel applet background becomes yellow.
+After the second threshold, it becomes red. Labels and icons retain readable
+contrast in both states.
 
 ## 14. Session and Machine Lifecycle
 
@@ -363,11 +385,13 @@ A small bounded retry is acceptable only for clearly transient infrastructure fa
 MVP settings:
 
 - Cancellation delay — default 3 seconds; 0 disables delay
+- Maximum countdown duration — default 30 days; configurable from 1–99 days
+- Panel remaining time format — unit labels or colon positions
 - Warning 1 — default 30 minutes; configurable/disableable
 - Warning 2 — default 5 minutes; configurable/disableable
 - Cancel timer on user switch — default Off
 
-Other display customization is excluded from MVP.
+Further display customization is excluded from MVP.
 
 ## 24. No Overlay Window
 
@@ -433,6 +457,8 @@ Package contents include:
 - At-time mode opens by default.
 - Lock is selected by default.
 - User can create At-time or Countdown timers.
+- Countdown uses explicit day and hour units.
+- Countdown respects the configured maximum duration.
 - Past At-time values resolve to tomorrow after confirmation.
 - Only one active timer exists per user.
 

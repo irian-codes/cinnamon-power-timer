@@ -17,6 +17,7 @@ export function parseTimerValue(
   mode: TimerMode,
   value: string,
   now = new Date(),
+  maxCountdownDays = 30,
 ): ParsedTimerValue {
   const normalized = value.trim();
   if (mode === 'at-time') {
@@ -35,16 +36,25 @@ export function parseTimerValue(
     };
   }
 
-  const match = /^(\d{1,3}):(\d{2}):(\d{2})$/.exec(normalized);
-  const hours = Number(match?.[1]);
-  const minutes = Number(match?.[2]);
-  const seconds = Number(match?.[3]);
-  if (!match || minutes > 59 || seconds > 59) {
-    throw new Error('Enter duration using HH:MM:SS.');
+  const configuredMaximum = Number.isFinite(maxCountdownDays)
+    ? Math.max(1, Math.min(99, Math.floor(maxCountdownDays)))
+    : 30;
+  const match = /^(\d+)\s*d\s*(\d+)\s*h\s*(\d+)\s*m$/i.exec(normalized);
+  if (!match) {
+    throw new Error('Enter duration using DD d HH h MM m.');
   }
-  const durationSeconds = hours * 3_600 + minutes * 60 + seconds;
-  if (durationSeconds < 1 || durationSeconds > 604_800) {
-    throw new Error('Duration must be between one second and seven days.');
+  const days = Number(match[1]);
+  const hours = Number(match[2]);
+  const minutes = Number(match[3]);
+  if (days > 99) throw new Error('You cannot input more than 99 d.');
+  if (hours > 23) throw new Error('You cannot input more than 23 h.');
+  if (minutes > 59) throw new Error('You cannot input more than 59 m.');
+  const durationSeconds = days * 86_400 + hours * 3_600 + minutes * 60;
+  if (durationSeconds < 60) {
+    throw new Error('Duration requires at least one minute.');
+  }
+  if (durationSeconds > configuredMaximum * 86_400) {
+    throw new Error(`Duration cannot exceed ${configuredMaximum} days.`);
   }
   return { mode, durationSeconds };
 }

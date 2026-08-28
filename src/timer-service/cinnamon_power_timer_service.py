@@ -16,7 +16,13 @@ import dbus.service
 from dbus.mainloop.glib import DBusGMainLoop
 from gi.repository import GLib
 
-from cinnamon_power_timer.timer_core import TimerAction, TimerEngine, TimerState, TimerStatus
+from cinnamon_power_timer.timer_core import (
+    TimerAction,
+    TimerEngine,
+    TimerState,
+    TimerStatus,
+    warning_level_for_remaining,
+)
 
 BUS_NAME = "org.irian.CinnamonPowerTimer"
 OBJECT_PATH = "/org/irian/CinnamonPowerTimer"
@@ -255,6 +261,7 @@ class TimerService(dbus.service.Object):
         return GLib.SOURCE_CONTINUE
 
     def _check_warnings(self, timer: TimerState, remaining: float, active: bool) -> None:
+        timer.warning_level = warning_level_for_remaining(timer.warnings, remaining)
         crossed: list[str] = []
         for index, warning in enumerate(timer.warnings):
             if warning.enabled and not warning.fired and remaining <= warning.seconds:
@@ -263,7 +270,6 @@ class TimerService(dbus.service.Object):
         if not crossed:
             return
         level = "red" if "red" in crossed else "yellow"
-        timer.warning_level = level
         if active:
             self.WarningCrossed(json.dumps({"level": level, "remaining_seconds": int(math.ceil(remaining))}))
         else:

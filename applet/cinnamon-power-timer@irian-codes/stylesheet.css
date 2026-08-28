@@ -1,38 +1,86 @@
+.cpt-menu .popup-menu-content,
+.cpt-action-menu {
+  padding: 8px 0;
+}
+
+.cpt-menu .popup-menu-item,
+.cpt-action-menu .popup-menu-item {
+  padding: 6px 18px;
+  spacing: 10px;
+}
+
+/* biome-ignore lint/correctness/noUnknownPseudoClass: Cinnamon St uses :insensitive. */
+.cpt-menu .popup-menu-item:insensitive {
+  color: inherit;
+}
+
+.cpt-static-row,
 .cpt-title {
+  color: inherit;
+}
+
+.cpt-title {
+  font-size: 1.05em;
+  font-weight: bold;
+}
+
+.cpt-section-label {
+  color: inherit;
   font-weight: bold;
 }
 
 .cpt-mode-box {
-  spacing: 6px;
+  spacing: 4px;
 }
 
-.cpt-mode-button,
-.cpt-mode-button-selected {
-  padding: 6px 12px;
+.cpt-mode-button {
+  padding: 5px 10px;
   border-radius: 4px;
-}
-
-.cpt-mode-button-selected {
-  background-color: rgba(128, 128, 128, 0.35);
-  font-weight: bold;
 }
 
 .cpt-time-entry {
   width: 170px;
-  padding: 6px 10px;
+  padding: 5px 8px;
+}
+
+.cpt-menu-icon {
+  icon-size: 16px;
+}
+
+.cpt-primary-action {
+  font-weight: bold;
 }
 
 .cpt-detail-value {
   font-weight: bold;
 }
 
-.cpt-error,
-.cpt-warning-red {
+.cpt-error {
   color: #f66151;
 }
 
-.cpt-warning-yellow {
-  color: #f6d32d;
+.applet-box.cpt-warning-yellow,
+.applet-box.cpt-warning-yellow:hover,
+.applet-box.cpt-warning-yellow:checked {
+  color: #241f31;
+  background-color: #f6d32d;
+}
+
+.applet-box.cpt-warning-red,
+.applet-box.cpt-warning-red:hover,
+.applet-box.cpt-warning-red:checked {
+  color: #ffffff;
+  background-color: #c01c28;
+}
+
+.applet-box.cpt-warning-yellow .applet-label,
+.applet-box.cpt-warning-yellow > .applet-icon {
+  color: #241f31;
+}
+
+.applet-box.cpt-warning-red .applet-label,
+.applet-box.cpt-warning-red > .applet-icon {
+  color: #ffffff;
 }
 
 .cpt-paused,

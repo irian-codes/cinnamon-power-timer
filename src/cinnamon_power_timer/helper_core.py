@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 
-MAX_DELAY_MILLISECONDS = 7 * 24 * 60 * 60 * 1000
+MAX_DELAY_MILLISECONDS = 99 * 24 * 60 * 60 * 1000
 
 
 class PrivilegedAction(StrEnum):
@@ -33,7 +33,7 @@ def validate_action(value: str) -> PrivilegedAction:
 
 def validate_delay(delay_milliseconds: int) -> None:
     if delay_milliseconds < 1 or delay_milliseconds > MAX_DELAY_MILLISECONDS:
-        raise ValueError("Timer delay must be between one millisecond and seven days")
+        raise ValueError("Timer delay must be between one millisecond and 99 days")
 
 
 class ScheduleRegistry:
