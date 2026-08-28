@@ -14,6 +14,7 @@ calm until deliberately selected.
 - Keep all ordinary text at normal theme contrast. Reserve muted styling for genuinely disabled actions.
 - Use the theme selection treatment for the active timer mode.
 - Reserve warning and destructive colors for their corresponding states.
+- Use yellow and red panel backgrounds after their warning thresholds.
 - Use 16px symbolic theme icons throughout menus.
 - Keep a compact density without reducing comfortable pointer targets.
 
@@ -59,3 +60,4 @@ supporting durations through `168:00` without seconds.
 - The setup menu remains compact at default text scaling.
 - Mode switches, action selection, and invalid input keep the menu open.
 - Both fields accept digit-only entry and display `HH:MM`.
+- Warning backgrounds keep panel labels and icons readable.

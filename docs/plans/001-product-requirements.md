@@ -200,6 +200,10 @@ If warnings are crossed while another Unix user is active, defer them. When the 
 
 While cancellation confirmation has paused the timer, use a distinct paused visual state.
 
+After the first warning threshold, the panel applet background becomes yellow.
+After the second threshold, it becomes red. Labels and icons retain readable
+contrast in both states.
+
 ## 14. Session and Machine Lifecycle
 
 ### Screen lock
