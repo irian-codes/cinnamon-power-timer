@@ -45,6 +45,17 @@ class WarningSettings:
     fired: bool = False
 
 
+def warning_level_for_remaining(warnings: list[WarningSettings], remaining: float) -> str:
+    level = "normal"
+    for index, warning in enumerate(warnings):
+        if not warning.enabled or remaining > warning.seconds:
+            continue
+        if index > 0:
+            return "red"
+        level = "yellow"
+    return level
+
+
 @dataclass
 class TimerState:
     mode: TimerMode
@@ -158,6 +169,7 @@ class TimerEngine:
             cancellation_delay=max(0, min(30, int(settings.get("cancellation_delay_seconds", 3)))),
             cancel_on_user_switch=bool(settings.get("cancel_on_user_switch", False)),
             warnings=warnings,
+            warning_level=warning_level_for_remaining(warnings, duration),
         )
         return self.timer
 

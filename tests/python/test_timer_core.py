@@ -105,6 +105,16 @@ class TimerEngineTests(unittest.TestCase):
         )
         self.assertTrue(timer.warnings[0].fired)
         self.assertTrue(timer.warnings[1].fired)
+        self.assertEqual(timer.warning_level, "red")
+
+    def test_warning_level_tracks_remaining_thresholds(self) -> None:
+        warnings = [
+            timer_core.WarningSettings(True, 30 * 60),
+            timer_core.WarningSettings(True, 5 * 60),
+        ]
+        self.assertEqual(timer_core.warning_level_for_remaining(warnings, 31 * 60), "normal")
+        self.assertEqual(timer_core.warning_level_for_remaining(warnings, 30 * 60), "yellow")
+        self.assertEqual(timer_core.warning_level_for_remaining(warnings, 5 * 60), "red")
 
     def test_warning_at_exact_start_duration_can_fire(self) -> None:
         engine = timer_core.TimerEngine(FakeClock())

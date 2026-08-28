@@ -199,7 +199,9 @@ Default warning milestones:
 
 Both thresholds are configurable and independently disableable.
 
-Warnings fire only when a running timer crosses a threshold. If a timer starts below a threshold, that warning is skipped.
+Warning notifications fire only when a running timer crosses a threshold. If a
+timer starts below a threshold, that notification is skipped. Its panel color
+still reflects the current warning threshold immediately.
 
 Each warning milestone fires at most once per timer.
 

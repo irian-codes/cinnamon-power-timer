@@ -50,6 +50,10 @@ day, hour, and minute parts. Colon format omits unused leading positions while
 preserving internal zero positions. Both formats show seconds only below one
 minute, using `SS s`.
 
+Warning colors always reflect enabled thresholds and current remaining time.
+Starting inside a threshold applies its color immediately, even when its
+crossing notification is intentionally skipped.
+
 ## Implementation constraints
 
 - Preserve the Cinnamon 6.6 `getActiveItem` compatibility shim.
