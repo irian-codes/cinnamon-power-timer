@@ -231,11 +231,13 @@ class CinnamonPowerTimerApplet extends Applet.TextIconApplet {
   private _atTimeButton!: DynamicCinnamonObject;
   private _countdownButton!: DynamicCinnamonObject;
   private _timeSectionLabel!: DynamicCinnamonObject;
+  private _startButton!: DynamicCinnamonObject;
   private _formErrorRow!: DynamicCinnamonObject;
   private _formErrorLabel!: DynamicCinnamonObject;
   private _updatingTimeEntry = false;
   private _replaceTimeInputOnNextDigit = false;
   private _formError: string | null = null;
+  private _startPending: boolean;
   private cancellationDelay!: number;
   private warningOneEnabled!: boolean;
   private warningOneMinutes!: number;
@@ -263,6 +265,7 @@ class CinnamonPowerTimerApplet extends Applet.TextIconApplet {
     this._proxy = null;
     this._removed = false;
     this._cancellationDialog = null;
+    this._startPending = false;
 
     this.set_applet_tooltip('Cinnamon Power Timer');
     this._menuManager = new PopupMenu.PopupMenuManager(this);
@@ -478,11 +481,12 @@ class CinnamonPowerTimerApplet extends Applet.TextIconApplet {
     this.menu.addMenuItem(this._formErrorRow);
     this._syncFormError();
     this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
-    const start = this._createIconMenuItem('Start Timer', 'media-playback-start-symbolic');
-    start.actor.add_style_class_name('cpt-primary-action');
-    this._keepMenuOpenOnActivate(start);
-    start.connect('activate', () => this._startTimer());
-    this.menu.addMenuItem(start);
+    this._startButton = this._createIconMenuItem('Start Timer', 'media-playback-start-symbolic');
+    this._startButton.actor.add_style_class_name('cpt-primary-action');
+    this._startButton.setSensitive(!this._startPending);
+    this._keepMenuOpenOnActivate(this._startButton);
+    this._startButton.connect('activate', () => this._startTimer());
+    this.menu.addMenuItem(this._startButton);
   }
 
   private _modeButtonStyle(mode: 'at-time' | 'countdown'): string {
@@ -649,7 +653,7 @@ class CinnamonPowerTimerApplet extends Applet.TextIconApplet {
   }
 
   private _startTimer(confirmedTomorrow = false): void {
-    if (!this._proxy) return;
+    if (!this._proxy || this._startPending || this._state.status !== 'idle') return;
     let request: CreateTimerRequest;
     try {
       request = this._buildRequest(confirmedTomorrow);
@@ -665,14 +669,26 @@ class CinnamonPowerTimerApplet extends Applet.TextIconApplet {
     }
     delete request.needsTomorrowConfirmation;
     this._formError = null;
-    this._proxy.CreateTimerRemote(JSON.stringify(request), (result, error) => {
-      if (error) {
-        this._setFormError(this._errorMessage(error));
-        return;
-      }
-      this.menu.close();
-      this._acceptState(result[0]);
-    });
+    this._startPending = true;
+    this._startButton.setSensitive(false);
+    try {
+      this._proxy.CreateTimerRemote(JSON.stringify(request), (result, error) => {
+        this._startPending = false;
+        if (this._removed) return;
+        if (error) {
+          if (this._state.status !== 'idle') return;
+          this._startButton.setSensitive(true);
+          this._setFormError(this._errorMessage(error));
+          return;
+        }
+        this.menu.close();
+        this._acceptState(result[0]);
+      });
+    } catch (error) {
+      this._startPending = false;
+      this._startButton.setSensitive(true);
+      this._setFormError(this._errorMessage(error));
+    }
   }
 
   private _setFormError(message: string | null): void {

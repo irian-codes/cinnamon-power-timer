@@ -30,8 +30,16 @@ class TimerEngineTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "whole minutes"):
             timer_core.TimerEngine.resolve_request({"mode": "countdown", "duration_seconds": 3601})
 
+        with self.assertRaisesRegex(ValueError, "whole minutes"):
+            timer_core.TimerEngine.resolve_request({"mode": "countdown", "duration_seconds": 60.5})
+
         with self.assertRaisesRegex(ValueError, "30 days"):
             timer_core.TimerEngine.resolve_request({"mode": "countdown", "duration_seconds": 31 * 86400})
+
+        duration, _target, _original = timer_core.TimerEngine.resolve_request(
+            {"mode": "countdown", "duration_seconds": 60.0}
+        )
+        self.assertEqual(duration, 60)
 
     def test_countdown_uses_configured_maximum(self) -> None:
         duration, _target, original = timer_core.TimerEngine.resolve_request(

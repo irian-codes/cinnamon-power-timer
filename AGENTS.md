@@ -7,6 +7,8 @@
 - Keep countdown limits aligned across the applet, service, and helper.
 - Keep panel countdown formatting centralized in `timer-format.ts`.
 - Derive warning colors from thresholds, independent from notification state.
+- Gate timer creation while its D-Bus request remains pending.
+- Validate raw countdown numbers before integer conversion.
 - Settle cancellation dialogs idempotently on close, destroy, or visibility loss.
 - Keep Cinnamon and D-Bus adapters thin around testable domain logic.
 - Put pure Python logic under `src/cinnamon_power_timer/`.

@@ -116,7 +116,15 @@ class TimerEngine:
         mode = TimerMode(request["mode"])
         now = now or local_now()
         if mode == TimerMode.COUNTDOWN:
-            seconds = int(request.get("duration_seconds", 0))
+            duration_value = request.get("duration_seconds", 0)
+            if (
+                isinstance(duration_value, bool)
+                or not isinstance(duration_value, (int, float))
+                or not math.isfinite(duration_value)
+                or duration_value % 1
+            ):
+                raise ValueError("Countdown must use whole minutes")
+            seconds = int(duration_value)
             settings = request.get("settings", {})
             maximum_days = max(1, min(MAX_COUNTDOWN_DAYS, int(settings.get("maximum_countdown_days", 30))))
             if seconds < 60:
