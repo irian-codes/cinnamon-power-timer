@@ -1,4 +1,4 @@
-import { CancellationLifecycle } from './cancellation-lifecycle';
+import { CancellationCountdown, CancellationLifecycle } from './cancellation-lifecycle';
 import { formatRemaining } from './timer-format';
 import { positionDropdown } from './menu-layout';
 import {
@@ -136,14 +136,14 @@ const ACTIONS: readonly TimerActionDefinition[] = [
 
 var CancellationDialog = GObject.registerClass(
   class CancellationDialog extends ModalDialog.ModalDialog {
-    private _remaining = 0;
+    private _countdown!: CancellationCountdown;
     private _lifecycle!: CancellationLifecycle;
-    private _timeoutId = 0;
+    private _timeoutId!: number;
     private _confirmButton!: DynamicCinnamonObject;
 
     _init(delay: number, confirmCallback: () => void, abortCallback: () => void): void {
       super._init();
-      this._remaining = delay;
+      this._countdown = new CancellationCountdown(delay);
       this._lifecycle = new CancellationLifecycle(abortCallback);
       this._timeoutId = 0;
 
@@ -160,7 +160,7 @@ var CancellationDialog = GObject.registerClass(
       this._confirmButton = this.addButton({
         label: this._buttonLabel(),
         action: () => {
-          if (this._remaining > 0) return;
+          if (!this._countdown.isComplete) return;
           if (!this._lifecycle.confirm()) return;
           this._stopCountdown();
           confirmCallback();
@@ -168,7 +168,7 @@ var CancellationDialog = GObject.registerClass(
         },
         destructive_action: true,
       });
-      this._confirmButton.reactive = delay === 0;
+      this._setConfirmButtonEnabled(this._countdown.isComplete);
       this.connect('closed', () => this._dismiss());
       this.connect('destroy', () => this._dismiss());
       this.connect('notify::visible', () => {
@@ -179,12 +179,12 @@ var CancellationDialog = GObject.registerClass(
           return GLib.SOURCE_REMOVE;
         });
       });
-      if (delay > 0) {
+      if (!this._countdown.isComplete) {
         this._timeoutId = Mainloop.timeout_add_seconds(1, () => {
-          this._remaining -= 1;
-          this._confirmButton.label = this._buttonLabel();
-          if (this._remaining <= 0) {
-            this._confirmButton.reactive = true;
+          this._countdown.tick();
+          this._confirmButton.set_label(this._buttonLabel());
+          if (this._countdown.isComplete) {
+            this._setConfirmButtonEnabled(true);
             this._timeoutId = 0;
             return GLib.SOURCE_REMOVE;
           }
@@ -194,7 +194,12 @@ var CancellationDialog = GObject.registerClass(
     }
 
     private _buttonLabel(): string {
-      return this._remaining > 0 ? `Cancel Timer (${this._remaining})` : 'Cancel Timer';
+      return this._countdown.label();
+    }
+
+    private _setConfirmButtonEnabled(enabled: boolean): void {
+      this._confirmButton.reactive = enabled;
+      this._confirmButton.can_focus = enabled;
     }
 
     private _dismiss(): void {
