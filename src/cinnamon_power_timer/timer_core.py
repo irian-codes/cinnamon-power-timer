@@ -103,8 +103,10 @@ class TimerEngine:
         now = now or local_now()
         if mode == TimerMode.COUNTDOWN:
             seconds = int(request.get("duration_seconds", 0))
-            if seconds < 1 or seconds > 7 * 24 * 60 * 60:
-                raise ValueError("Countdown must be between one second and seven days")
+            if seconds < 60 or seconds > 7 * 24 * 60 * 60:
+                raise ValueError("Countdown must be between one minute and seven days")
+            if seconds % 60:
+                raise ValueError("Countdown must use whole minutes")
             return float(seconds), None, format_duration_value(seconds)
 
         value = str(request.get("time", ""))
@@ -182,8 +184,8 @@ class TimerEngine:
 
 def format_duration_value(seconds: int) -> str:
     hours, remainder = divmod(seconds, 3600)
-    minutes, seconds = divmod(remainder, 60)
-    return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+    minutes = remainder // 60
+    return f"{hours:02d}:{minutes:02d}"
 
 
 def local_now() -> datetime:

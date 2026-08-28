@@ -17,9 +17,9 @@ describe('parseTimerValue', () => {
   });
 
   it('parses a countdown value', () => {
-    expect(parseTimerValue('countdown', '01:02:03')).toEqual({
+    expect(parseTimerValue('countdown', '01:02')).toEqual({
       mode: 'countdown',
-      durationSeconds: 3_723,
+      durationSeconds: 3_720,
     });
   });
 
@@ -27,7 +27,7 @@ describe('parseTimerValue', () => {
     expect(() => parseTimerValue('at-time', value)).toThrow('valid 24-hour time');
   });
 
-  it.each(['00:00:00', '00:60:00', '1000:00:00'])('rejects invalid countdown %s', (value) => {
+  it.each(['00:00', '00:60', '169:00', '01:02:03'])('rejects invalid countdown %s', (value) => {
     expect(() => parseTimerValue('countdown', value)).toThrow();
   });
 });

@@ -113,7 +113,7 @@ New Timer
 [ At time ] [ Countdown ]
 
 Duration
-[ 00 : 45 : 00 ]
+[ 00 : 45 ]
 
 Action
 [ Lock ▼ ]
@@ -128,6 +128,12 @@ Warning configuration, cancellation delay, and other preferences belong in Apple
 **At time** is selected by default.
 
 Users may explicitly switch to Countdown.
+
+Mode and action selection keep the setup pane open. It closes only after a
+timer starts successfully.
+
+Both inputs accept digits only and insert the colon automatically. Typing
+`2034` produces `20:34`. Countdown uses hours and minutes without seconds.
 
 ## 9. At-Time Semantics
 

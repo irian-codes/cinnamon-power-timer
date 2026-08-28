@@ -1,5 +1,11 @@
 import { formatRemaining } from './timer-format';
 import { positionDropdown } from './menu-layout';
+import {
+  appendTimeDigit,
+  formatTimeDigits,
+  removeLastTimeDigit,
+  sanitizeTimeDigits,
+} from './time-input';
 import { parseTimerValue } from './timer-request';
 
 const Applet = imports.ui.applet;
@@ -192,13 +198,20 @@ class CinnamonPowerTimerApplet extends Applet.TextIconApplet {
   private _capabilities: Partial<Record<TimerActionId, boolean>>;
   private _mode: 'at-time' | 'countdown';
   private _action: TimerActionId;
-  private _atTimeValue: string;
-  private _countdownValue: string;
+  private _atTimeDigits: string;
+  private _countdownDigits: string;
   private _proxy: TimerProxyInstance | null;
   private _removed: boolean;
   private _cancellationDialog: DynamicCinnamonObject | null;
   private _menuManager: DynamicCinnamonObject;
-  private _timeEntry: DynamicCinnamonObject;
+  private _timeEntry!: DynamicCinnamonObject;
+  private _atTimeButton!: DynamicCinnamonObject;
+  private _countdownButton!: DynamicCinnamonObject;
+  private _timeSectionLabel!: DynamicCinnamonObject;
+  private _formErrorRow!: DynamicCinnamonObject;
+  private _formErrorLabel!: DynamicCinnamonObject;
+  private _updatingTimeEntry = false;
+  private _replaceTimeInputOnNextDigit = false;
   private _formError: string | null = null;
   private cancellationDelay!: number;
   private warningOneEnabled!: boolean;
@@ -220,8 +233,8 @@ class CinnamonPowerTimerApplet extends Applet.TextIconApplet {
     this._capabilities = { lock: true };
     this._mode = 'at-time';
     this._action = 'lock';
-    this._atTimeValue = '19:00';
-    this._countdownValue = '00:45:00';
+    this._atTimeDigits = '1900';
+    this._countdownDigits = '0045';
     this._proxy = null;
     this._removed = false;
     this._cancellationDialog = null;
@@ -333,44 +346,40 @@ class CinnamonPowerTimerApplet extends Applet.TextIconApplet {
     this._addStaticLabel('New Timer', 'cpt-title');
     const modeRow = new PopupMenu.PopupBaseMenuItem({ reactive: false });
     const modeBox = new St.BoxLayout({ style_class: 'cpt-mode-box' });
-    const atTimeButton = new St.Button({
+    this._atTimeButton = new St.Button({
       label: 'At time',
-      style_class:
-        this._mode === 'at-time'
-          ? 'menu-category-button-selected cpt-mode-button'
-          : 'menu-category-button cpt-mode-button',
+      style_class: this._modeButtonStyle('at-time'),
     });
-    const countdownButton = new St.Button({
+    this._countdownButton = new St.Button({
       label: 'Countdown',
-      style_class:
-        this._mode === 'countdown'
-          ? 'menu-category-button-selected cpt-mode-button'
-          : 'menu-category-button cpt-mode-button',
+      style_class: this._modeButtonStyle('countdown'),
     });
-    atTimeButton.connect('clicked', () => {
-      this._mode = 'at-time';
-      this._renderMenu();
-    });
-    countdownButton.connect('clicked', () => {
-      this._mode = 'countdown';
-      this._renderMenu();
-    });
-    modeBox.add_child(atTimeButton);
-    modeBox.add_child(countdownButton);
+    this._atTimeButton.connect('clicked', () => this._setMode('at-time'));
+    this._countdownButton.connect('clicked', () => this._setMode('countdown'));
+    modeBox.add_child(this._atTimeButton);
+    modeBox.add_child(this._countdownButton);
     modeRow.addActor(modeBox);
     this.menu.addMenuItem(modeRow);
 
-    this._addStaticLabel(this._mode === 'at-time' ? 'Time' : 'Duration');
+    this._timeSectionLabel = this._addStaticLabel(this._mode === 'at-time' ? 'Time' : 'Duration');
     const inputRow = new PopupMenu.PopupBaseMenuItem({ reactive: false });
     this._timeEntry = new St.Entry({
-      text: this._mode === 'at-time' ? this._atTimeValue : this._countdownValue,
+      text: formatTimeDigits(this._currentTimeDigits()),
       can_focus: true,
       style_class: 'run-dialog-entry cpt-time-entry',
-      hint_text: this._mode === 'at-time' ? 'HH:MM' : 'HH:MM:SS',
+      hint_text: 'HH:MM',
     });
+    this._timeEntry.clutter_text.connect('key-focus-in', () => {
+      this._timeEntry.clutter_text.set_selection(0, -1);
+      this._replaceTimeInputOnNextDigit = true;
+    });
+    this._timeEntry.clutter_text.connect(
+      'key-press-event',
+      (_actor: DynamicCinnamonObject, event: DynamicCinnamonObject) =>
+        this._onTimeEntryKeyPress(event),
+    );
     this._timeEntry.clutter_text.connect('text-changed', () => {
-      if (this._mode === 'at-time') this._atTimeValue = this._timeEntry.get_text();
-      else this._countdownValue = this._timeEntry.get_text();
+      this._onTimeEntryTextChanged();
     });
     this._timeEntry.clutter_text.connect('activate', () => this._startTimer());
     inputRow.addActor(this._timeEntry, { expand: true });
@@ -385,6 +394,12 @@ class CinnamonPowerTimerApplet extends Applet.TextIconApplet {
     }
     const originalOpen = comboMenu.open.bind(comboMenu);
     comboMenu.open = () => {
+      // Cinnamon 6.6 moves focus before announcing this detached child menu.
+      // Prime the manager so that focus movement cannot close the parent.
+      if (this._menuManager._activeMenu === this.menu) {
+        this._menuManager._menuStack.push(this.menu);
+        this._menuManager._activeMenu = comboMenu;
+      }
       originalOpen();
       const [anchorX] = actionCombo.actor.get_transformed_position();
       const [, parentY] = this.menu.actor.get_transformed_position();
@@ -399,10 +414,16 @@ class CinnamonPowerTimerApplet extends Applet.TextIconApplet {
       );
       comboMenu.actor.set_position(position.x, position.y);
     };
-    ACTIONS.forEach((action) => {
+    ACTIONS.forEach((action, position) => {
       const item = this._createIconMenuItem(action.label, action.icon);
       item.setSensitive(this._capabilities[action.id] === true);
+      this._keepMenuOpenOnActivate(item);
       actionCombo.addMenuItem(item);
+      item.connect('activate', () => {
+        actionCombo.setActiveItem(position);
+        this._action = action.id;
+        comboMenu.close();
+      });
     });
     const activeIndex = Math.max(
       0,
@@ -414,16 +435,116 @@ class CinnamonPowerTimerApplet extends Applet.TextIconApplet {
       (_combo: DynamicCinnamonObject, position: number) => {
         const action = ACTIONS[position];
         if (action) this._action = action.id;
+        comboMenu.close();
       },
     );
     this.menu.addMenuItem(actionCombo);
 
-    if (this._formError) this._addStaticLabel(this._formError, 'cpt-error');
+    this._formErrorRow = new PopupMenu.PopupBaseMenuItem({
+      reactive: false,
+      style_class: 'cpt-static-row',
+    });
+    this._formErrorLabel = new St.Label({ text: '', style_class: 'cpt-error' });
+    this._formErrorRow.addActor(this._formErrorLabel);
+    this.menu.addMenuItem(this._formErrorRow);
+    this._syncFormError();
     this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
     const start = this._createIconMenuItem('Start Timer', 'media-playback-start-symbolic');
     start.actor.add_style_class_name('cpt-primary-action');
+    this._keepMenuOpenOnActivate(start);
     start.connect('activate', () => this._startTimer());
     this.menu.addMenuItem(start);
+  }
+
+  private _modeButtonStyle(mode: 'at-time' | 'countdown'): string {
+    const state = this._mode === mode ? 'menu-category-button-selected' : 'menu-category-button';
+    return `${state} cpt-mode-button`;
+  }
+
+  private _setMode(mode: 'at-time' | 'countdown'): void {
+    if (this._mode === mode) return;
+    this._mode = mode;
+    this._atTimeButton.set_style_class_name(this._modeButtonStyle('at-time'));
+    this._countdownButton.set_style_class_name(this._modeButtonStyle('countdown'));
+    this._timeSectionLabel.set_text(mode === 'at-time' ? 'Time' : 'Duration');
+    this._replaceTimeInputOnNextDigit = true;
+    this._updateTimeEntry();
+    this._setFormError(null);
+  }
+
+  private _currentTimeDigits(): string {
+    return this._mode === 'at-time' ? this._atTimeDigits : this._countdownDigits;
+  }
+
+  private _setCurrentTimeDigits(digits: string): void {
+    if (this._mode === 'at-time') this._atTimeDigits = digits;
+    else this._countdownDigits = digits;
+  }
+
+  private _updateTimeEntry(): void {
+    this._updatingTimeEntry = true;
+    this._timeEntry.set_text(formatTimeDigits(this._currentTimeDigits()));
+    this._timeEntry.clutter_text.set_cursor_position(-1);
+    this._updatingTimeEntry = false;
+  }
+
+  private _onTimeEntryKeyPress(event: DynamicCinnamonObject): boolean {
+    const symbol = event.get_key_symbol();
+    const state = event.get_state();
+    if ((state & Clutter.ModifierType.CONTROL_MASK) !== 0) {
+      if (symbol === Clutter.KEY_a || symbol === Clutter.KEY_A) {
+        this._replaceTimeInputOnNextDigit = true;
+      }
+      return Clutter.EVENT_PROPAGATE;
+    }
+
+    let digit: string | null = null;
+    if (symbol >= Clutter.KEY_0 && symbol <= Clutter.KEY_9) {
+      digit = String(symbol - Clutter.KEY_0);
+    } else if (symbol >= Clutter.KEY_KP_0 && symbol <= Clutter.KEY_KP_9) {
+      digit = String(symbol - Clutter.KEY_KP_0);
+    }
+    if (digit !== null) {
+      this._setCurrentTimeDigits(
+        appendTimeDigit(
+          this._currentTimeDigits(),
+          digit,
+          this._mode,
+          this._replaceTimeInputOnNextDigit,
+        ),
+      );
+      this._replaceTimeInputOnNextDigit = false;
+      this._updateTimeEntry();
+      this._setFormError(null);
+      return Clutter.EVENT_STOP;
+    }
+    if (symbol === Clutter.KEY_BackSpace) {
+      this._setCurrentTimeDigits(
+        this._replaceTimeInputOnNextDigit ? '' : removeLastTimeDigit(this._currentTimeDigits()),
+      );
+      this._replaceTimeInputOnNextDigit = false;
+      this._updateTimeEntry();
+      return Clutter.EVENT_STOP;
+    }
+    if (symbol === Clutter.KEY_Delete) {
+      this._setCurrentTimeDigits('');
+      this._replaceTimeInputOnNextDigit = false;
+      this._updateTimeEntry();
+      return Clutter.EVENT_STOP;
+    }
+    return Clutter.keysym_to_unicode(symbol) ? Clutter.EVENT_STOP : Clutter.EVENT_PROPAGATE;
+  }
+
+  private _onTimeEntryTextChanged(): void {
+    if (this._updatingTimeEntry) return;
+    this._setCurrentTimeDigits(sanitizeTimeDigits(this._timeEntry.get_text(), this._mode));
+    this._replaceTimeInputOnNextDigit = false;
+    this._updateTimeEntry();
+    this._setFormError(null);
+  }
+
+  private _keepMenuOpenOnActivate(item: DynamicCinnamonObject): void {
+    item.activate = (event: DynamicCinnamonObject) => item.emit('activate', event, true);
   }
 
   private _buildActiveMenu(): void {
@@ -463,13 +584,15 @@ class CinnamonPowerTimerApplet extends Applet.TextIconApplet {
     this.menu.addMenuItem(retry);
   }
 
-  private _addStaticLabel(text: string, styleClass = 'cpt-section-label'): void {
+  private _addStaticLabel(text: string, styleClass = 'cpt-section-label'): DynamicCinnamonObject {
     const row = new PopupMenu.PopupBaseMenuItem({
       reactive: false,
       style_class: 'cpt-static-row',
     });
-    row.addActor(new St.Label({ text, style_class: styleClass }));
+    const label = new St.Label({ text, style_class: styleClass });
+    row.addActor(label);
     this.menu.addMenuItem(row);
+    return label;
   }
 
   private _createIconMenuItem(
@@ -498,8 +621,7 @@ class CinnamonPowerTimerApplet extends Applet.TextIconApplet {
     try {
       request = this._buildRequest(confirmedTomorrow);
     } catch (error) {
-      this._formError = this._errorMessage(error);
-      this._renderMenu();
+      this._setFormError(this._errorMessage(error));
       return;
     }
     if (request.needsTomorrowConfirmation && !confirmedTomorrow) {
@@ -512,13 +634,23 @@ class CinnamonPowerTimerApplet extends Applet.TextIconApplet {
     this._formError = null;
     this._proxy.CreateTimerRemote(JSON.stringify(request), (result, error) => {
       if (error) {
-        this._formError = this._errorMessage(error);
-        this._renderMenu();
+        this._setFormError(this._errorMessage(error));
         return;
       }
       this.menu.close();
       this._acceptState(result[0]);
     });
+  }
+
+  private _setFormError(message: string | null): void {
+    this._formError = message;
+    this._syncFormError();
+  }
+
+  private _syncFormError(): void {
+    if (!this._formErrorRow || !this._formErrorLabel) return;
+    this._formErrorLabel.set_text(this._formError ?? '');
+    this._formErrorRow.actor.visible = this._formError !== null;
   }
 
   private _buildRequest(confirmedTomorrow: boolean): CreateTimerRequest {

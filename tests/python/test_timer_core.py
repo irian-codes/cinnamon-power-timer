@@ -17,15 +17,18 @@ class FakeClock:
 class TimerEngineTests(unittest.TestCase):
     def test_countdown_is_resolved(self) -> None:
         duration, target, original = timer_core.TimerEngine.resolve_request(
-            {"mode": "countdown", "duration_seconds": 3661}
+            {"mode": "countdown", "duration_seconds": 3660}
         )
-        self.assertEqual(duration, 3661)
+        self.assertEqual(duration, 3660)
         self.assertIsNone(target)
-        self.assertEqual(original, "01:01:01")
+        self.assertEqual(original, "01:01")
 
     def test_countdown_rejects_invalid_duration(self) -> None:
-        with self.assertRaisesRegex(ValueError, "between one second"):
+        with self.assertRaisesRegex(ValueError, "between one minute"):
             timer_core.TimerEngine.resolve_request({"mode": "countdown", "duration_seconds": 0})
+
+        with self.assertRaisesRegex(ValueError, "whole minutes"):
+            timer_core.TimerEngine.resolve_request({"mode": "countdown", "duration_seconds": 61})
 
     def test_future_at_time_uses_today(self) -> None:
         now = datetime(2026, 8, 27, 18, 0, tzinfo=UTC)

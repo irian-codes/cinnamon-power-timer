@@ -35,16 +35,15 @@ export function parseTimerValue(
     };
   }
 
-  const match = /^(\d{1,3}):(\d{2}):(\d{2})$/.exec(normalized);
+  const match = /^(\d{1,3}):(\d{2})$/.exec(normalized);
   const hours = Number(match?.[1]);
   const minutes = Number(match?.[2]);
-  const seconds = Number(match?.[3]);
-  if (!match || minutes > 59 || seconds > 59) {
-    throw new Error('Enter duration using HH:MM:SS.');
+  if (!match || minutes > 59) {
+    throw new Error('Enter duration using HH:MM.');
   }
-  const durationSeconds = hours * 3_600 + minutes * 60 + seconds;
-  if (durationSeconds < 1 || durationSeconds > 604_800) {
-    throw new Error('Duration must be between one second and seven days.');
+  const durationSeconds = hours * 3_600 + minutes * 60;
+  if (durationSeconds < 60 || durationSeconds > 604_800) {
+    throw new Error('Duration must be between one minute and seven days.');
   }
   return { mode, durationSeconds };
 }
