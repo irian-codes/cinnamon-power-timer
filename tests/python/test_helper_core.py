@@ -2,12 +2,50 @@ from __future__ import annotations
 
 import pytest
 
-from cinnamon_power_timer.helper_core import PrivilegedAction, ScheduleRegistry, validate_action, validate_delay
+from cinnamon_power_timer.helper_core import (
+    LOGIN1_ACTIONS,
+    LOGIN1_ROOT_CHECK_INHIBITORS,
+    PrivilegedAction,
+    ScheduleRegistry,
+    authorize_available_action,
+    validate_action,
+    validate_delay,
+)
 
 
 def test_validate_action_rejects_unknown_values() -> None:
     with pytest.raises(ValueError, match="Unsupported privileged action"):
         validate_action("arbitrary-command")
+
+
+def test_all_privileged_actions_honor_logind_inhibitors() -> None:
+    assert {
+        action: (methods.capability_method, methods.execution_method) for action, methods in LOGIN1_ACTIONS.items()
+    } == {
+        PrivilegedAction.SUSPEND: ("CanSuspend", "SuspendWithFlags"),
+        PrivilegedAction.HIBERNATE: ("CanHibernate", "HibernateWithFlags"),
+        PrivilegedAction.REBOOT: ("CanReboot", "RebootWithFlags"),
+        PrivilegedAction.POWER_OFF: ("CanPowerOff", "PowerOffWithFlags"),
+    }
+    assert LOGIN1_ROOT_CHECK_INHIBITORS == 1
+
+
+@pytest.mark.parametrize("capability", ["yes", "challenge"])
+def test_available_actions_always_require_polkit_authorization(capability: str) -> None:
+    authorization_calls: list[None] = []
+
+    authorize_available_action(PrivilegedAction.SUSPEND, capability, lambda: authorization_calls.append(None))
+
+    assert authorization_calls == [None]
+
+
+def test_unavailable_actions_do_not_request_authorization() -> None:
+    authorization_calls: list[None] = []
+
+    with pytest.raises(RuntimeError, match="suspend action is unavailable"):
+        authorize_available_action(PrivilegedAction.SUSPEND, "no", lambda: authorization_calls.append(None))
+
+    assert authorization_calls == []
 
 
 @pytest.mark.parametrize("delay", [0, 8_553_600_001])

@@ -13,9 +13,12 @@ from dbus.mainloop.glib import DBusGMainLoop
 from gi.repository import GLib
 
 from cinnamon_power_timer.helper_core import (
+    LOGIN1_ACTIONS,
+    LOGIN1_ROOT_CHECK_INHIBITORS,
     PrivilegedAction,
     ScheduledAction,
     ScheduleRegistry,
+    authorize_available_action,
     validate_action,
     validate_delay,
 )
@@ -31,21 +34,6 @@ POLKIT_PATH = "/org/freedesktop/PolicyKit1/Authority"
 POLKIT_INTERFACE = "org.freedesktop.PolicyKit1.Authority"
 SCHEDULE_ACTION = "org.irian.CinnamonPowerTimer.schedule-power-action"
 IDLE_EXIT_SECONDS = 30
-
-
-LOGIN1_METHODS = {
-    PrivilegedAction.SUSPEND: "Suspend",
-    PrivilegedAction.HIBERNATE: "Hibernate",
-    PrivilegedAction.REBOOT: "Reboot",
-    PrivilegedAction.POWER_OFF: "PowerOff",
-}
-
-CAPABILITY_METHODS = {
-    PrivilegedAction.SUSPEND: "CanSuspend",
-    PrivilegedAction.HIBERNATE: "CanHibernate",
-    PrivilegedAction.REBOOT: "CanReboot",
-    PrivilegedAction.POWER_OFF: "CanPowerOff",
-}
 
 
 class PowerTimerHelper(dbus.service.Object):
@@ -89,7 +77,7 @@ class PowerTimerHelper(dbus.service.Object):
             raise PermissionError("Authorization was denied")
 
     def _capability(self, action: PrivilegedAction) -> str:
-        return str(getattr(self.login1, CAPABILITY_METHODS[action])())
+        return str(getattr(self.login1, LOGIN1_ACTIONS[action].capability_method)())
 
     def _session_properties(self, session_id: str):
         session_path = self.login1.GetSession(session_id)
@@ -118,11 +106,7 @@ class PowerTimerHelper(dbus.service.Object):
         if self.schedules.contains(uid):
             raise RuntimeError("Only one privileged timer per user is allowed")
         validate_delay(delay)
-        capability = self._capability(action)
-        if capability not in ("yes", "challenge"):
-            raise RuntimeError(f"The {action.value} action is unavailable")
-        if capability == "challenge":
-            self._authorize(str(sender))
+        authorize_available_action(action, self._capability(action), lambda: self._authorize(str(sender)))
         self.schedules.add(uid, str(session_id), action, delay, monotonic())
         self.idle_since = 0.0
         return json.dumps({"scheduled": True})
@@ -145,9 +129,9 @@ class PowerTimerHelper(dbus.service.Object):
     @dbus.service.method(INTERFACE, in_signature="", out_signature="s")
     def GetCapabilities(self) -> str:
         capabilities: dict[str, bool] = {}
-        for action, method_name in CAPABILITY_METHODS.items():
+        for action, action_methods in LOGIN1_ACTIONS.items():
             try:
-                value = str(getattr(self.login1, method_name)())
+                value = str(getattr(self.login1, action_methods.capability_method)())
                 capabilities[action.value] = value in ("yes", "challenge")
             except dbus.DBusException:
                 capabilities[action.value] = False
@@ -181,7 +165,8 @@ class PowerTimerHelper(dbus.service.Object):
             )
             return
         try:
-            getattr(self.login1, LOGIN1_METHODS[schedule.action])(False)
+            method = LOGIN1_ACTIONS[schedule.action].execution_method
+            getattr(self.login1, method)(dbus.UInt64(LOGIN1_ROOT_CHECK_INHIBITORS))
         except dbus.DBusException as exc:
             self.ActionFinished(schedule.uid, "failed", f"The {schedule.action.value} action failed: {exc}")
             return

@@ -11,6 +11,9 @@
 - Validate raw countdown numbers before integer conversion.
 - Update active-menu countdown labels without rebuilding menu actors.
 - Settle cancellation dialogs idempotently on close, destroy, or visibility loss.
+- Route Lock through `org.cinnamon.ScreenSaver` on the session bus.
+- Authorize every privileged schedule through Polkit.
+- Use logind `*WithFlags` methods with root inhibitor checks.
 - Keep Cinnamon and D-Bus adapters thin around testable domain logic.
 - Put pure Python logic under `src/cinnamon_power_timer/`.
 - Run `make build` before handing off repository changes.
