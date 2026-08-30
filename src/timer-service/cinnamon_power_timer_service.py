@@ -16,6 +16,7 @@ import dbus.service
 from dbus.mainloop.glib import DBusGMainLoop
 from gi.repository import GLib
 
+from cinnamon_power_timer.session_actions import lock_cinnamon_screen
 from cinnamon_power_timer.timer_core import (
     TimerAction,
     TimerEngine,
@@ -297,10 +298,9 @@ class TimerService(dbus.service.Object):
             return
         try:
             proxy = self.system_bus.get_object(LOGIN1_NAME, self._session_path(timer.session_id))
-            session = dbus.Interface(proxy, "org.freedesktop.login1.Session")
             props = dbus.Interface(proxy, "org.freedesktop.DBus.Properties")
             if not bool(props.Get("org.freedesktop.login1.Session", "LockedHint")):
-                session.Lock()
+                lock_cinnamon_screen(self.bus, dbus.Interface)
         except dbus.DBusException as exc:
             self._fail(f"The lock action failed: {exc}")
             return

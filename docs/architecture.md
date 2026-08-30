@@ -18,6 +18,11 @@ Runs as a `systemd --user` service and is authoritative for one timer belonging 
 
 Responsibilities include timer state, cancellation pause semantics, warning milestone state, session lifecycle handling, and coordination with the privileged helper.
 
+Lock expiry calls `org.cinnamon.ScreenSaver.Lock` on the session bus. This
+activates Cinnamon's screensaver when it is not already running and waits for
+the lock request to complete. Logind remains authoritative for session
+ownership, active state, and the already-locked hint.
+
 ### Privileged helper
 
 Path: `src/privileged-helper/`
@@ -72,10 +77,11 @@ Signal:
 - `ActionFinished(uid, result, message)`
 
 The helper derives caller identity from the system bus. It verifies session
-ownership and checks logind capabilities. Polkit authorizes scheduling when
-logind reports a challenge. Cancellation, pause, and resume only affect the
-caller's own UID. At expiry it re-checks the owning graphical session through
-logind before executing any action.
+ownership and uses logind capabilities only to detect unavailable actions.
+Polkit evaluates every scheduling request. Cancellation, pause, and resume only
+affect the caller's own UID. At expiry it re-checks the owning graphical
+session and executes through logind's `*WithFlags` methods with privileged-user
+inhibitor checks enabled.
 
 ## Lifecycle rules
 

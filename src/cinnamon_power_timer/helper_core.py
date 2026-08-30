@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from enum import StrEnum
 
@@ -13,6 +14,32 @@ class PrivilegedAction(StrEnum):
     HIBERNATE = "hibernate"
     REBOOT = "reboot"
     POWER_OFF = "power-off"
+
+
+@dataclass(frozen=True)
+class Login1Action:
+    capability_method: str
+    execution_method: str
+
+
+LOGIN1_ACTIONS = {
+    PrivilegedAction.SUSPEND: Login1Action("CanSuspend", "SuspendWithFlags"),
+    PrivilegedAction.HIBERNATE: Login1Action("CanHibernate", "HibernateWithFlags"),
+    PrivilegedAction.REBOOT: Login1Action("CanReboot", "RebootWithFlags"),
+    PrivilegedAction.POWER_OFF: Login1Action("CanPowerOff", "PowerOffWithFlags"),
+}
+
+LOGIN1_ROOT_CHECK_INHIBITORS = 1
+
+
+def authorize_available_action(
+    action: PrivilegedAction,
+    capability: str,
+    authorize: Callable[[], None],
+) -> None:
+    if capability not in ("yes", "challenge"):
+        raise RuntimeError(f"The {action.value} action is unavailable")
+    authorize()
 
 
 @dataclass

@@ -154,10 +154,12 @@ Hibernate, Reboot, and Power Off. It derives caller identity from D-Bus,
 verifies session ownership, authenticates scheduling through Polkit, and
 re-checks active-session ownership before execution.
 
-Polkit authentication occurs when logind reports that an action requires a
-challenge. Actions already permitted for active local users do not prompt.
+Polkit evaluates every privileged scheduling request. Its configured policy
+decides whether authorization is cached, prompted, or denied. At expiry, the
+helper calls logind while explicitly honoring active system inhibitors.
 
-Lock remains session-scoped. Each Unix user owns one independent timer.
+Lock remains session-scoped and activates Cinnamon's screensaver over the
+session bus. Each Unix user owns one independent timer.
 
 ## License
 

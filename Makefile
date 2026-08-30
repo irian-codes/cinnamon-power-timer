@@ -97,6 +97,7 @@ install-files:
 	install -Dm755 src/privileged-helper/cinnamon_power_timer_helper.py "$(PYTHON_LIB_DIR)/cinnamon_power_timer_helper.py"
 	install -Dm644 src/cinnamon_power_timer/__init__.py "$(PYTHON_LIB_DIR)/cinnamon_power_timer/__init__.py"
 	install -Dm644 src/cinnamon_power_timer/helper_core.py "$(PYTHON_LIB_DIR)/cinnamon_power_timer/helper_core.py"
+	install -Dm644 src/cinnamon_power_timer/session_actions.py "$(PYTHON_LIB_DIR)/cinnamon_power_timer/session_actions.py"
 	install -Dm644 src/cinnamon_power_timer/timer_core.py "$(PYTHON_LIB_DIR)/cinnamon_power_timer/timer_core.py"
 	install -Dm644 packaging/systemd/cinnamon-power-timer.service "$(SYSTEMD_USER_DIR)/cinnamon-power-timer.service"
 	install -Dm644 packaging/systemd/cinnamon-power-timer-helper.service "$(SYSTEMD_SYSTEM_DIR)/cinnamon-power-timer-helper.service"
